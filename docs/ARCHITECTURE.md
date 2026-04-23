@@ -1,163 +1,140 @@
-# Genie — Architecture
+# Genie — Arquitetura
 
-## Overview
-
-Genie is a local-first financial assistant. The Go API handles agent orchestration and B3 data; SvelteKit serves the UI via SSE streaming. All state is persisted in a local SQLite database — no external database required.
+Genie é um assistente financeiro local-first. O backend TypeScript (Fastify) cuida da orquestração do agente e dos dados B3; o SvelteKit serve a UI via SSE streaming. Todo o estado é persistido em SQLite local — nenhum banco externo necessário.
 
 ---
 
-## High-Level Diagram
+## Visão Geral
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│                    User Browser                            │
-│  SvelteKit SPA (adapter-static, localhost:5173 in dev)     │
-│                                                            │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  +page.svelte (home)   asset/[ticker]/   favorites/ │   │
-│  │       ↕ SSE                  ↕ REST          ↕ REST │   │
-│  └─────────────────────────────────────────────────────┘   │
-└────────────────────────┬───────────────────────────────────┘
-                         │ HTTP / SSE
-┌────────────────────────▼───────────────────────────────────┐
-│              Go API  (chi, localhost:5858)                  │
-│                                                            │
-│  ┌──────────┐  ┌───────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ /health  │  │ /api/chat │  │/api/news │  │/api/favs │  │
-│  └──────────┘  └─────┬─────┘  └────┬─────┘  └────┬─────┘  │
-│                      │             │              │         │
-│              ┌───────▼─────────────▼──────────────▼──────┐ │
-│              │            internal/                       │ │
-│              │  ┌─────────┐  ┌─────────┐  ┌──────────┐  │ │
-│              │  │  agent/ │  │  news/  │  │  store/  │  │ │
-│              │  │QueryLoop│  │ scraper │  │ SQLite   │  │ │
-│              │  └────┬────┘  └────┬────┘  └──────────┘  │ │
-│              │       │            │                       │ │
-│              │  ┌────▼────┐  ┌────▼────┐                 │ │
-│              │  │ tools/  │  │   b3/   │                 │ │
-│              │  │web_srch │  │ cascade │                 │ │
-│              │  │web_fetch│  │ brapi → │                 │ │
-│              │  │b3_quote │  │ yfinance│                 │ │
-│              │  └─────────┘  └─────────┘                 │ │
-│              └───────────────────────────────────────────┘ │
-│                                                            │
-│              ┌────────────────────────────────────────┐    │
-│              │  jobs/ (cron 08:00 BRT weekdays)       │    │
-│              │  → RefreshFavoritesNews                │    │
-│              └────────────────────────────────────────┘    │
-└──────────────────────────┬─────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-   brapi.dev       Yahoo Finance        Status Invest
-   (primary)       (secondary)          (scraping fallback)
-                           │
-                    OpenRouter API
-                 (anthropic/claude-sonnet-4.6)
-```
-
----
-
-## Request Flow — Chat Message
-
-```
-1. User types message in ChatInput.svelte
-2. POST /api/chat/stream  {conversationId, message}
-3. Server opens SSE stream → client receives events
-4. agent.QueryLoop.Run(ctx, messages, eventCh):
-   a. OpenRouter.ChatCompletion(messages, tools) → stream tokens → SSE{type:"token"}
-   b. LLM requests tool_call(s):
-      - web_search("PETR4 notícias") → DuckDuckGo HTML → []SearchResult
-      - web_fetch(url)               → readability → markdown (max 8000 chars)
-      - b3_quote("PETR4")           → CascadeSource{brapi→yfinance→scraping}
-      - favorite_add("PETR4")       → SQLite INSERT
-      Each tool emits SSE{type:"tool_call_start"} … SSE{type:"tool_call_end"}
-   c. Tool results appended to messages; loop continues (max 20 iterations)
-   d. LLM returns final message → SSE{type:"message_end", usage}
-5. Frontend renders markdown response + collapsible tool calls
+┌──────────────────────────────────────────────────────────────┐
+│                     SvelteKit Frontend                        │
+│            (Vite dev: :5173  /  SSG build: /build)           │
+│   Home · Favoritos · Rankings · Ativo · Chat                 │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTP / SSE  (proxy → :5858)
+┌───────────────────────────▼──────────────────────────────────┐
+│              Fastify API  (Node 22, localhost:5858)           │
+│                                                               │
+│  POST /api/chat/stream   ← SSE streaming                     │
+│  GET  /api/b3/quote/:ticker                                   │
+│  GET  /api/b3/fundamentals/:ticker                            │
+│  GET  /api/b3/search?q=                                       │
+│  GET  /api/b3/categories                                      │
+│  GET  /api/news?category=|ticker=                             │
+│  GET/POST/DELETE /api/favorites                               │
+│  GET  /health                                                 │
+└──────┬───────────────────────────────────────────────────────┘
+       │
+       ├── QueryLoop (agent/loop.ts)
+       │     └── OpenRouterClient → LLM (streaming SSE)
+       │           └── Tools: b3_quote, b3_fundamentals,
+       │                      b3_search_ticker, web_search,
+       │                      web_fetch, favorite_add/remove/list
+       │
+       ├── B3 Cascade (b3/cascade.ts)
+       │     ├── 1. BrapiSource        (brapi.dev API)
+       │     ├── 2. YFinanceSource     (Yahoo Finance v7/v10)
+       │     ├── 3. StatusInvestScraper (cheerio)
+       │     ├── 4. GoogleFinanceSource (scraper)
+       │     └── 5. FundamentusSource  (ISO-8859-1 scraper)
+       │           + TTLCache (5min quotes, 24h fundamentals)
+       │           + CircuitBreaker (3 falhas → 30s open)
+       │
+       ├── NewsService (news/service.ts)
+       │     └── WebSearch (DuckDuckGo + Google News RSS)
+       │           └── SQLite cache (news_articles)
+       │
+       ├── Scheduler (jobs/scheduler.ts — croner)
+       │     ├── daily-favorites-news  (08h seg-sex)
+       │     └── news-refresh          (a cada hora)
+       │
+       └── SQLite (better-sqlite3, WAL mode)
+             ├── conversations + messages
+             ├── favorites
+             └── news_articles
 ```
 
 ---
 
-## Package Structure
+## Camadas
 
-| Package | Responsibility |
-|---------|----------------|
-| `cmd/genie` | Entrypoint: server boot, graceful shutdown |
-| `internal/server` | Chi router, middleware, SSE handler |
-| `internal/agent` | QueryLoop, tool dispatcher, OpenRouter client |
-| `internal/tools` | web_search, web_fetch, b3_*, favorites_* implementations |
-| `internal/b3` | CascadeSource (brapi → yfinance → scraping), CircuitBreaker, TTLCache |
-| `internal/news` | NewsService: fetch + cache articles by category/ticker |
-| `internal/store` | SQLite driver, migrations, query helpers |
-| `internal/jobs` | Cron scheduler: daily favorites news refresh |
-| `internal/lib` | Logger (zerolog), config (env), HTTP client factory |
+### `src/agent/`
 
----
+| Arquivo | Responsabilidade |
+|---|---|
+| `loop.ts` | `QueryLoop` — loop de tool-calling até 20 passos, paraleliza tools `concurrent: true` |
+| `openrouter.ts` | `OpenRouterClient` — SSE streaming com retry exponencial (1s/2s/4s) |
+| `tool.ts` | `Registry` — registra e despacha tools |
+| `prompt.ts` | System prompt + `buildMessages` com injeção de contexto (favoritos, notícias) |
+| `message.ts` | Tipos `Message`, `ToolCallRequest`, `Role` |
 
-## Observability
+### `src/b3/`
 
-### Logger
-- **Package**: `internal/lib/logger/` — thin wrapper over `zerolog`.
-- Every log entry carries a timestamp and caller field.
-- Request handler logs include: `method`, `path`, `status`, `duration_ms`, `request_id`, and domain fields (`ticker`, `conversation_id`, `category`, etc.).
-- Level controlled via `LOG_LEVEL` env var (`debug|info|warn|error`, default `info`).
+| Arquivo | Responsabilidade |
+|---|---|
+| `cascade.ts` | Orquestra as 5 fontes com cache e circuit breaker |
+| `cache.ts` | `TTLCache<T>` — in-memory, cleanup via `setInterval` unref'd |
+| `breaker.ts` | `CircuitBreaker` — 3 falhas em 60s abre por 30s; `Clock` injetável para testes |
+| `brapi.ts` | API brapi.dev — quote + fundamentals (requer token para fundamentals completos) |
+| `yfinance.ts` | Yahoo Finance v7 (quote) + v10 quoteSummary (fundamentals); sufixo `.SA` |
+| `statusinvest.ts` | Scraper cheerio — seletores do redesign 2025 |
+| `googlefinance.ts` | Scraper — extrai `data-last-price` e JSON-LD do Google Finance |
+| `fundamentus.ts` | Scraper ISO-8859-1 — cobre small/mid caps da B3 que as APIs não têm |
+| `categories.ts` | Mapa estático ticker→setor, reverse index O(1), `searchTickers` por prefixo |
 
-### Middleware (Fase 13)
-Registered via `server.RequestID()`, `server.RequestLogger()`, and `server.Recoverer()` — defined in `internal/server/middleware.go`:
+### `src/news/`
 
-| Middleware | Purpose |
-|-----------|---------|
-| `RequestID()` | Reads `X-Request-ID` header or generates an 8-byte hex ID; injects into context and response header |
-| `RequestLogger(log, reg)` | Structured log per request (method, path, status, duration_ms, bytes, request_id, remote_addr); increments metrics counters/timers when a `*metrics.Registry` is provided |
-| `Recoverer(log)` | Catches panics, logs stack trace with `request_id`, returns HTTP 500 |
+`NewsService` implementa cache em 3 camadas:
+1. **L1** — `TTLCache` in-memory (5 min)
+2. **L2** — SQLite (`news_articles`) — fresco se `fetched_at` < 2h
+3. **L3** — Web search fallback (DuckDuckGo + Google News RSS)
 
-### In-Memory Metrics (Fase 13)
-- **Package**: `internal/lib/metrics/` — zero external dependencies.
-- Thread-safe registry with three metric types:
+### `src/tools/`
 
-| Type | Description |
-|------|-------------|
-| `Counter` | Monotonically increasing int64 — atomic ops |
-| `Timer` | Rolling window ring buffer (last 1000 observations); computes p50/p95/p99/max in milliseconds |
-| `Gauge` | Float64 that can go up or down |
+Cada tool implementa a interface `Tool` (name, description, schema JSON, handler, concurrent):
 
-- Canonical key format: `name{label1=val1,label2=val2}` (labels sorted alphabetically).
-- `Registry.Snapshot()` returns a deep copy safe for JSON serialisation.
+| Tool | `concurrent` | Descrição |
+|---|---|---|
+| `b3_quote` | ✅ | Cotação atual via Cascade |
+| `b3_fundamentals` | ✅ | Fundamentos via Cascade |
+| `b3_search_ticker` | ✅ | Busca por prefixo no índice estático |
+| `web_search` | ✅ | DuckDuckGo HTML scraping |
+| `web_fetch` | ✅ | Readability + Turndown + sanitização anti-prompt-injection |
+| `favorite_add` | ❌ | Persiste no SQLite |
+| `favorite_remove` | ❌ | Remove do SQLite |
+| `favorite_list` | ✅ | Lista do SQLite |
 
-**Metrics currently emitted**:
+### `src/server/`
 
-| Name | Type | Labels | Description |
-|------|------|--------|-------------|
-| `http_requests_total` | Counter | `method`, `status` (2xx/4xx/5xx) | Total HTTP requests by method and status class |
-| `http_request_duration` | Timer | `method`, `route` | Request duration using chi route pattern |
+Pipeline Fastify:
+```
+CORS → rate-limit → onResponse logger → routes → error handler
+```
 
-### Endpoint `/api/metrics`
-- `GET /api/metrics` — returns `registry.Snapshot()` as JSON.
-- **Auth**: if `ADMIN_TOKEN` is set, requires matching `X-Admin-Token` header; otherwise publicly accessible (suitable for local dev).
-- Registered only when `server.WithMetrics(reg)` is called.
+O chat SSE usa `reply.raw.write()` diretamente para streaming compatível com EventSource.
 
-### Expanding Observability
-To replace in-memory metrics with Prometheus:
-1. Install `github.com/prometheus/client_golang`.
-2. Replace `internal/lib/metrics` with a thin adapter implementing the same `Counter`/`Timer`/`Gauge` interface backed by Prometheus types.
-3. Expose `/metrics` via `promhttp.Handler()` instead of the custom JSON snapshot.
+### `src/store/`
 
-To add OpenTelemetry traces:
-1. Wire `go.opentelemetry.io/otel` with an OTLP exporter.
-2. Add a span in `RequestLogger` and propagate via context to tool calls and DB queries.
-3. The `request_id` already serves as a correlation ID; map it to `trace_id` for distributed tracing.
+Migrations SQL em `src/store/migrations/` aplicadas via `better-sqlite3` no boot com `WAL`, `PRAGMA foreign_keys = ON` e `PRAGMA busy_timeout = 5000`.
+
+### `src/jobs/`
+
+`Scheduler` (croner) com single-flight guard por job name e timeout de 5 min por execução.
 
 ---
 
-## Security Considerations
+## Observabilidade
 
-| Threat | Mitigation |
-|--------|------------|
-| SSRF in `web_fetch` | Block private/loopback IPs; allow only http/https; 30s timeout |
-| Prompt injection via web content | Strip "ignore previous instructions" patterns before passing to LLM |
-| SQL injection | `database/sql` parameterized queries exclusively |
-| XSS | Svelte auto-escapes; no `{@html}` on remote data without DOMPurify |
-| API key exposure | `OPENROUTER_API_KEY` stays server-side only; never sent to frontend |
-| Rate limiting | 30 req/min per IP on `/api/chat/*` |
-| Sensitive logs | Never log API keys or tokens; mask with `***` |
+- Logs estruturados via **pino** com child loggers por contexto (`b3`, `agent`, `news`, `job`)
+- Todo request logado: `method`, `path`, `status`, `durationMs`
+- Circuit breaker abre após 3 falhas consecutivas dentro de 60s e fecha automaticamente após 30s
+
+---
+
+## Roadmap
+
+- [ ] Trocar DuckDuckGo scraping por SearXNG self-hosted para buscas mais estáveis
+- [ ] Adicionar métricas Prometheus via `prom-client`
+- [ ] Avaliar Bun como runtime
+- [ ] Autenticação multi-usuário (hoje é single-user local)
