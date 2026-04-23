@@ -96,6 +96,21 @@ export class ApiClient {
     return this.request<void>('DELETE', `/api/favorites/${encodeURIComponent(ticker)}`);
   }
 
+  /** Validates the admin token. Returns true if the token grants access, false otherwise. */
+  async verifyAdminToken(adminToken: string): Promise<boolean> {
+    try {
+      await this.requestWithHeaders<{ ok: boolean }>(
+        'GET',
+        '/api/admin/auth',
+        undefined,
+        { 'X-Admin-Token': adminToken },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   triggerDailyRefresh(adminToken?: string): Promise<{ status: string }> {
     const headers: Record<string, string> = {};
     if (adminToken) headers['X-Admin-Token'] = adminToken;

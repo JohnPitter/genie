@@ -24,6 +24,7 @@ export interface AppDeps {
   loop?: QueryLoop;
   dailyJob?: DailyFavoritesJob;
   adminToken?: string;
+  model?: string;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -65,8 +66,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     db: 'ok',
   }));
 
-  // API config
-  app.get('/api/config', async () => ({ version: VERSION }));
+  // API config — never exposes the API key, only non-sensitive values
+  app.get('/api/config', async () => ({ version: VERSION, model: deps.model ?? '' }));
 
   // Domain routes
   await registerB3Routes(app, deps);

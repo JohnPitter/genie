@@ -3,8 +3,7 @@
   import { ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Database, Cpu, Clock, Key } from 'lucide-svelte';
   import { apiClient } from '$lib/api/client';
 
-  const ADMIN_PIN = '1234';
-  const SESSION_KEY = 'genie_admin_unlocked';
+  const SESSION_TOKEN_KEY = 'genie_admin_token';
 
   // ── Auth ─────────────────────────────────────────────
   let unlocked = false;
@@ -12,6 +11,9 @@
   let pinError = '';
   let showPin = false;
   let pinInput: HTMLInputElement;
+  let submitting = false;
+  /** The validated admin token (= PIN) kept in memory for this session. */
+  let adminToken = '';
 
   // ── System status ─────────────────────────────────────
   interface SystemInfo {
@@ -28,27 +30,44 @@
   let jobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
   let jobMsg = '';
 
-  onMount(() => {
-    unlocked = sessionStorage.getItem(SESSION_KEY) === '1';
-    if (unlocked) loadSystem();
-    else setTimeout(() => pinInput?.focus(), 50);
-  });
-
-  function submitPin() {
-    if (pin === ADMIN_PIN) {
-      sessionStorage.setItem(SESSION_KEY, '1');
+  onMount(async () => {
+    const stored = sessionStorage.getItem(SESSION_TOKEN_KEY);
+    if (stored && (await apiClient.verifyAdminToken(stored))) {
+      adminToken = stored;
       unlocked = true;
-      pinError = '';
       loadSystem();
     } else {
-      pinError = 'PIN incorreto.';
-      pin = '';
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
       setTimeout(() => pinInput?.focus(), 50);
+    }
+  });
+
+  async function submitPin() {
+    if (!pin.trim()) return;
+    submitting = true;
+    pinError = '';
+    try {
+      const ok = await apiClient.verifyAdminToken(pin);
+      if (ok) {
+        adminToken = pin;
+        sessionStorage.setItem(SESSION_TOKEN_KEY, pin);
+        unlocked = true;
+        loadSystem();
+      } else {
+        pinError = 'PIN incorreto.';
+        pin = '';
+        setTimeout(() => pinInput?.focus(), 50);
+      }
+    } catch {
+      pinError = 'Erro ao validar PIN. Backend indisponível?';
+    } finally {
+      submitting = false;
     }
   }
 
   function lock() {
-    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    adminToken = '';
     unlocked = false;
     pin = '';
     systemInfo = null;
@@ -79,7 +98,7 @@
     jobStatus = 'running';
     jobMsg = '';
     try {
-      await apiClient.triggerDailyRefresh();
+      await apiClient.triggerDailyRefresh(adminToken);
       jobStatus = 'done';
       jobMsg = 'Job iniciado em background.';
     } catch (err) {
@@ -147,7 +166,9 @@
           <p class="gate__error" role="alert">{pinError}</p>
         {/if}
 
-        <button type="submit" class="gate__btn">Entrar</button>
+        <button type="submit" class="gate__btn" disabled={submitting || !pin.trim()}>
+          {submitting ? 'Validando…' : 'Entrar'}
+        </button>
       </form>
     </div>
   </div>
@@ -301,10 +322,13 @@
     <!-- ── PIN de acesso ──────────────────────────────── -->
     <section class="card">
       <h2 class="card__title">PIN de administrador</h2>
-      <p class="card__desc">O PIN é definido diretamente no código-fonte (<code>+page.svelte → ADMIN_PIN</code>). Sessão expira ao fechar a aba.</p>
+      <p class="card__desc">
+        O PIN é o valor de <code>ADMIN_TOKEN</code> no arquivo <code>.env</code> do backend.
+        Sessão expira ao fechar a aba. Para trocar, edite <code>.env</code> e reinicie o servidor.
+      </p>
       <div class="pin-hint">
         <Key size={14} />
-        PIN atual: <code>••••</code> (4 dígitos)
+        Variável de ambiente: <code>ADMIN_TOKEN</code>
       </div>
     </section>
   </main>

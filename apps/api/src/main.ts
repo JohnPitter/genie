@@ -87,6 +87,7 @@ const app = await buildApp({
   newsSvc,
   loop,
   dailyJob,
+  model: config.OPENROUTER_MODEL,
   ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),
 });
 await app.listen({ port: config.PORT, host: '0.0.0.0' });

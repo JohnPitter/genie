@@ -23,6 +23,11 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps)
     }
   });
 
+  // Validation endpoint: if preHandler let it through, token is valid
+  app.get('/api/admin/auth', async (_req, reply) => {
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/admin/jobs/daily-favorites/run', async (_req, reply) => {
     if (!deps.dailyJob) {
       return reply.status(503).send({ error: 'daily favorites job not available' });
