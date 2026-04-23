@@ -133,6 +133,17 @@ export class QueryLoop {
         }
       }
 
+      // Model returned empty content with no tool calls — it silently failed
+      // (common with slow :free models under load). Emit a user-friendly fallback.
+      if (toolCalls.length === 0 && content.trim() === '') {
+        this.log.warn({ step, ttftMs, llmMs }, 'agent: model returned empty response — emitting fallback');
+        const fallback = 'Não consegui gerar uma resposta agora. O modelo pode estar sobrecarregado — tente novamente em instantes.';
+        await emit({ type: 'token', delta: fallback });
+        await emit({ type: 'message_end' });
+        await emit({ type: 'error', error: 'empty response from model' });
+        return [...messages, { role: 'assistant', content: fallback }];
+      }
+
       messages = [...messages, { role: 'assistant', content, ...(toolCalls.length ? { toolCalls } : {}) }];
 
       if (toolCalls.length === 0) {
