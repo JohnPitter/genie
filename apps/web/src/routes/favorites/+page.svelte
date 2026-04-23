@@ -180,7 +180,7 @@
     padding: var(--space-4xl, 40px) var(--space-xl, 20px);
     max-width: 900px;
     margin: 0 auto;
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* ── Header ────────────────────────────────────────────────────── */

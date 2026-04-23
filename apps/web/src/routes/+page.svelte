@@ -288,10 +288,12 @@
   }
 
   /* ── Responsive ───────────────────────────────────────── */
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .home {
-      padding: var(--space-xl) var(--space-md) var(--space-4xl);
+      /* Top padding reserva espaço para o botão hamburger fixo (44px + safe-area) */
+      padding: calc(env(safe-area-inset-top, 0) + var(--space-xl)) var(--space-md) var(--space-4xl);
       gap: var(--space-2xl);
+      min-height: calc(100dvh - 56px);
     }
 
     .home__conversation-inner {

@@ -655,6 +655,7 @@
     color: var(--accent-gold);
     flex-shrink: 0;
     width: 220px;
+    min-width: 0;
   }
 
   .env-val {
@@ -664,6 +665,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+  }
+
+  /* Mobile: empilhar key/val para evitar horizontal scroll */
+  @media (max-width: 520px) {
+    .env-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .env-key {
+      width: auto;
+    }
+    .env-val {
+      white-space: normal;
+      word-break: break-all;
+    }
   }
 
   .env-val--masked { color: var(--text-muted); letter-spacing: 0.05em; }

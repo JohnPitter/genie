@@ -59,7 +59,7 @@
 <style>
   .sidebar {
     width: 240px;
-    min-height: 100vh;
+    min-height: 100dvh;
     background: rgba(22, 23, 28, 0.82);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -70,6 +70,16 @@
     transition: width var(--dur-medium) var(--ease-standard);
     overflow: hidden;
     flex-shrink: 0;
+  }
+
+  /* Mobile: keep width usable on narrow screens */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: min(280px, 85vw);
+    }
+    .sidebar--collapsed {
+      width: min(280px, 85vw);
+    }
   }
 
   .sidebar--collapsed {
