@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
+  import { ArrowLeft } from 'lucide-svelte';
   import HeroOrb from '$lib/components/home/HeroOrb.svelte';
   import CategoryTabs from '$lib/components/home/CategoryTabs.svelte';
   import NewsGrid from '$lib/components/home/NewsGrid.svelte';
@@ -107,12 +108,22 @@
   {:else}
     <div class="home__conversation" in:fade={{ duration: 280 }}>
       <div class="home__conversation-inner">
-        <div
-          class="home__orb-compact"
-          in:scale={{ duration: 420, start: 0.4 }}
-          aria-hidden="true"
-        >
-          <OrbMini state={orbState} />
+        <div class="home__conversation-topbar">
+          <button
+            class="home__back-btn"
+            on:click={() => chatActions.clear()}
+            aria-label="Voltar para a página principal"
+          >
+            <ArrowLeft size={16} />
+            Voltar
+          </button>
+          <div
+            class="home__orb-compact"
+            in:scale={{ duration: 420, start: 0.4 }}
+            aria-hidden="true"
+          >
+            <OrbMini state={orbState} />
+          </div>
         </div>
 
         <div
@@ -204,14 +215,50 @@
 
   .home__conversation-inner {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-lg);
+    flex-direction: column;
+    gap: var(--space-md);
     width: 100%;
+  }
+
+  .home__conversation-topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .home__back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .home__back-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text-primary);
+    border-color: var(--border-interactive);
+  }
+
+  .home__back-btn:focus-visible {
+    outline: 2px solid var(--accent-lilac);
+    outline-offset: 2px;
   }
 
   .home__orb-compact {
     flex-shrink: 0;
-    padding-top: 10px;
+    margin-left: auto;
   }
 
   .home__chat-wrap {
@@ -308,13 +355,8 @@
       min-height: calc(100dvh - 56px);
     }
 
-    .home__conversation-inner {
-      flex-direction: column;
-    }
-
     .home__orb-compact {
-      align-self: center;
-      padding-top: 0;
+      margin-left: auto;
     }
 
     .home__hero-input {
