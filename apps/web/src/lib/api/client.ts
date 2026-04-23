@@ -171,16 +171,26 @@ export class ApiClient {
     }
 
     if (!response.ok) {
+      const errContentType = response.headers.get('content-type') ?? '';
       let errorBody: unknown;
-      try {
-        errorBody = await response.json();
-      } catch {
+      let message = `HTTP ${response.status}`;
+
+      if (errContentType.includes('json')) {
+        try {
+          errorBody = await response.json();
+          if (isObjectWithMessage(errorBody)) message = String(errorBody.message);
+          else if (isObjectWithError(errorBody)) message = String(errorBody.error);
+        } catch {
+          /* fall through */
+        }
+      } else {
+        // Non-JSON error (HTML from Vite proxy, plain text, etc.)
         errorBody = await response.text().catch(() => null);
+        message = response.status >= 500 || response.status === 0
+          ? 'Backend indisponível. Tente novamente em instantes.'
+          : `Erro ${response.status} do servidor.`;
       }
-      const message =
-        isObjectWithMessage(errorBody)
-          ? String(errorBody.message)
-          : `HTTP ${response.status}`;
+
       throw new ApiError(response.status, message, errorBody);
     }
 
@@ -189,7 +199,26 @@ export class ApiClient {
       return undefined as T;
     }
 
-    return response.json() as Promise<T>;
+    // Validate Content-Type before parsing — the Vite dev proxy may return HTML
+    // (a 404 page) when the backend is restarting, which would crash JSON.parse.
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('json')) {
+      throw new ApiError(
+        response.status,
+        'O servidor respondeu algo inesperado. O backend pode estar reiniciando — tente novamente em alguns segundos.',
+        null,
+      );
+    }
+
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new ApiError(
+        response.status,
+        'Resposta inválida do servidor. Tente novamente.',
+        null,
+      );
+    }
   }
 }
 
@@ -197,6 +226,10 @@ export class ApiClient {
 
 function isObjectWithMessage(value: unknown): value is { message: unknown } {
   return typeof value === 'object' && value !== null && 'message' in value;
+}
+
+function isObjectWithError(value: unknown): value is { error: unknown } {
+  return typeof value === 'object' && value !== null && 'error' in value;
 }
 
 // ── Default singleton ─────────────────────────────────────────────────────────

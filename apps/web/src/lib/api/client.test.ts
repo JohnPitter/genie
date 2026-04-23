@@ -98,7 +98,7 @@ describe('ApiClient error handling', () => {
     expect(caught!.body).toMatchObject({ details: 'missing field' });
   });
 
-  it('ApiError message defaults to HTTP status when no message field', async () => {
+  it('ApiError message is user-friendly when non-JSON error body (backend down)', async () => {
     const client = new ApiClient({
       fetch: makeFetch(new Response('Internal Server Error', { status: 503 })),
     });
@@ -110,7 +110,8 @@ describe('ApiClient error handling', () => {
       if (err instanceof ApiError) caught = err;
     }
 
-    expect(caught!.message).toBe('HTTP 503');
+    expect(caught!.status).toBe(503);
+    expect(caught!.message).toContain('Backend indisponível');
   });
 
   it('throws ApiError with status 0 on timeout', async () => {
