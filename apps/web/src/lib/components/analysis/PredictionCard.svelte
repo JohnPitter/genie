@@ -4,6 +4,20 @@
 
   export let item: PredictionItem;
 
+  // Tooltips concisos para cada indicador — glossário completo na página.
+  const VOTE_HINTS: Record<string, string> = {
+    'RSI': 'Índice de Força Relativa (0-100). >70 sobrecomprado, <30 sobrevendido.',
+    'MACD': 'Momentum do preço. Histograma positivo = tendência de alta.',
+    'Médias Móveis': 'SMA 20/50. Preço acima de ambas = tendência bullish.',
+    'Bollinger': 'Bandas de volatilidade. Preço na inferior pode reverter pra cima.',
+    'Volume': 'Força do movimento. Volume alto com preço subindo = interesse real.',
+    'Contexto IBOV': 'Tendência do Ibovespa. Serve como filtro macro para as decisões.',
+  };
+
+  function hintFor(name: string): string {
+    return VOTE_HINTS[name] ?? '';
+  }
+
   $: isBuy = item.signal === 'compra_forte' || item.signal === 'compra';
   $: isSell = item.signal === 'venda_forte' || item.signal === 'venda';
 
@@ -78,7 +92,12 @@
   {#if item.votes.length > 0}
     <div class="card__votes">
       {#each item.votes as v}
-        <span class="vote-pill" class:vote-pill--pos={v.vote === 1} class:vote-pill--neg={v.vote === -1}>
+        <span
+          class="vote-pill"
+          class:vote-pill--pos={v.vote === 1}
+          class:vote-pill--neg={v.vote === -1}
+          title={hintFor(v.name)}
+        >
           {v.name}
           <span class="vote-pill__icon">{v.vote === 1 ? '↑' : v.vote === -1 ? '↓' : '·'}</span>
         </span>

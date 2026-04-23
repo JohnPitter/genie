@@ -8,6 +8,9 @@
   import { apiClient } from '$lib/api/client';
   import type { PredictionsResponse } from '@genie/shared';
   import PredictionCard from '$lib/components/analysis/PredictionCard.svelte';
+  import Glossary from '$lib/components/analysis/Glossary.svelte';
+  import { fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
 
   type Tab = 'buy' | 'sell' | 'all';
 
@@ -225,11 +228,18 @@
       <p class="empty-state__hint">O sistema só emite sinais quando há confluência de pelo menos 2 indicadores — prioriza qualidade sobre quantidade.</p>
     </div>
   {:else}
-    <section class="cards-grid">
-      {#each visibleItems as item (item.id)}
-        <PredictionCard {item} />
-      {/each}
-    </section>
+    {#key activeTab}
+      <section class="cards-grid" in:fade={{ duration: 180, easing: cubicOut }}>
+        {#each visibleItems as item, i (item.id)}
+          <div
+            class="card-wrapper"
+            style="animation-delay: {i * 50}ms"
+          >
+            <PredictionCard {item} />
+          </div>
+        {/each}
+      </section>
+    {/key}
   {/if}
 
   <!-- ── Metodologia ─────────────────────────────────── -->
@@ -254,6 +264,9 @@
       </div>
     </div>
   </section>
+
+  <!-- ── Glossário (para iniciantes) ─────────────────── -->
+  <Glossary />
 
   <!-- ── Disclaimer ──────────────────────────────────── -->
   <div class="disclaimer" role="note">
@@ -511,6 +524,24 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-sm);
+  }
+
+  .card-wrapper {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: card-in 420ms cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+  }
+
+  @keyframes card-in {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-wrapper {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
   }
 
   /* ── Loading / Error / Empty ─── */
