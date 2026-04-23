@@ -7,9 +7,6 @@ build/
 .svelte-kit/
 coverage/
 
-# Backup binaries
-*.exe~
-
 # Environment secrets
 .env
 .env.local
@@ -26,23 +23,8 @@ coverage/
 # OS artifacts
 .DS_Store
 Thumbs.db
+*.exe~
 
 # Editor
 .vscode/settings.json
 .idea/
-
-# Go legacy artifacts and rename backup (not part of active build)
-apps/api-go-legacy/
-apps/api-ts/
-go.work
-go.work.sum
-
-# Makefile (Go era)
-Makefile
-
-# Production binaries at repo root (Go era)
-/genie
-/genie.exe
-/genie-linux-amd64
-/genie-darwin-arm64
-/genie-windows-amd64.exe

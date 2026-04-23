@@ -11,7 +11,7 @@
 [![Tests](https://img.shields.io/badge/Tests-207%20passing-2D8E5E?style=flat-square)](https://vitest.dev)
 [![License](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](#license)
 
-[Features](#-features) · [Como Funciona](#-como-funciona) · [Tech Stack](#-tech-stack) · [Desenvolvimento](#-desenvolvimento)
+[Features](#features) · [Como Funciona](#como-funciona) · [Tech Stack](#tech-stack) · [Desenvolvimento](#desenvolvimento) · [Variáveis de Ambiente](#variáveis-de-ambiente)
 
 </div>
 
@@ -36,7 +36,7 @@ Genie é um assistente financeiro especializado na B3 (bolsa de valores brasilei
 | **Notícias** | Busca via Google News RSS por ticker/categoria com cache em SQLite |
 | **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação em tempo real |
 | **Favoritos** | Adicione/remova ativos — o agente usa sua carteira como contexto nas respostas |
-| **Circuit breaker** | Cascade de 5 fontes de dados com fallback automático — nenhum ativo fica sem cotação |
+| **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo ativo da B3 fica sem cotação |
 | **Jobs agendados** | Refresh diário de notícias dos favoritos e warmup de cache de cotações |
 | **207 testes** | Unitários, integração, e2e de paridade — todos passando |
 
@@ -88,7 +88,7 @@ graph TD
 
 ### Cascade de 5 Fontes B3
 
-Cada request de cotação percorre as fontes em ordem de prioridade. Se uma falha ou o circuit breaker estiver aberto, a próxima é tentada automaticamente — garantindo que qualquer ativo ativo da B3 seja encontrado:
+Cada request percorre as fontes em ordem. Se uma falha ou o circuit breaker abriu, a próxima é tentada automaticamente:
 
 | # | Fonte | Tipo | Cobertura |
 |---|---|---|---|
@@ -117,9 +117,9 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 | **Banco** | SQLite via better-sqlite3 (WAL mode) |
 | **LLM** | OpenRouter (qualquer modelo compatível com OpenAI — use modelos `:free`) |
 | **B3 Sources** | brapi.dev · Yahoo Finance · StatusInvest · Google Finance · Fundamentus |
-| **Web Search** | DuckDuckGo HTML scraping + Google News RSS |
+| **Web Search** | DuckDuckGo HTML + Google News RSS |
 | **Web Fetch** | @mozilla/readability + turndown (HTML → Markdown) |
-| **Jobs** | croner (cron scheduler) |
+| **Jobs** | croner |
 | **Testes** | Vitest (207 testes) |
 | **Package manager** | pnpm workspaces |
 
@@ -131,7 +131,7 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 
 - Node.js 22+
 - pnpm 10+
-- Conta no [OpenRouter](https://openrouter.ai) (gratuita — modelos `:free` disponíveis, ex: `nvidia/nemotron-3-super-120b-a12b:free`)
+- Conta no [OpenRouter](https://openrouter.ai) (gratuita — modelos `:free` disponíveis)
 
 ### Setup
 
@@ -158,11 +158,11 @@ pnpm api:dev
 pnpm web:dev
 ```
 
-O frontend já está configurado para fazer proxy das chamadas `/api` para `localhost:5858`.
+O frontend faz proxy automático de `/api` para `localhost:5858`.
 
 ### Popular o banco com notícias iniciais
 
-Na primeira execução, o banco estará vazio. Rode o seeder para popular com artigos reais via Google News:
+Na primeira execução o banco estará vazio. Rode o seeder para popular com artigos reais via Google News:
 
 ```bash
 cd apps/api && node_modules/.bin/tsx src/scripts/seed-news.ts
@@ -191,7 +191,7 @@ genie/
 │  │  │  ├─ b3/               # Cascade + 5 fontes (brapi, yfinance, statusinvest, googlefinance, fundamentus)
 │  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob
 │  │  │  ├─ news/             # NewsService (Google News RSS + SQLite cache)
-│  │  │  ├─ scripts/          # seed-news.ts — popula o banco com artigos iniciais
+│  │  │  ├─ scripts/          # seed-news.ts — popula o banco na primeira execução
 │  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat)
 │  │  │  ├─ store/            # SQLite repos (conversations, favorites, news)
 │  │  │  ├─ tools/            # b3_quote, b3_fundamentals, web_search, web_fetch, favorites
@@ -213,7 +213,7 @@ Copie `apps/api/.env.example` para `apps/api/.env`:
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `OPENROUTER_API_KEY` | ✅ | Chave da API do OpenRouter |
-| `OPENROUTER_MODEL` | — | Modelo padrão (default: `anthropic/claude-3.5-haiku`) |
+| `OPENROUTER_MODEL` | — | Modelo (default: `anthropic/claude-3.5-haiku`) |
 | `PORT` | — | Porta do servidor (default: `5858`) |
 | `DB_PATH` | — | Caminho do SQLite (default: `genie.db`) |
 | `LOG_LEVEL` | — | Nível de log pino (default: `info`) |
@@ -221,10 +221,10 @@ Copie `apps/api/.env.example` para `apps/api/.env`:
 
 ### Modelos gratuitos recomendados
 
-O Genie funciona com qualquer modelo do OpenRouter que suporte tool calling. Opções gratuitas testadas:
+O Genie funciona com qualquer modelo do OpenRouter que suporte tool calling:
 
 ```
-nvidia/nemotron-3-super-120b-a12b:free  ← recomendado (120B, suporta tools)
+nvidia/nemotron-3-super-120b-a12b:free  ← recomendado (suporta tools)
 meta-llama/llama-3.3-70b-instruct:free
 qwen/qwen3-next-80b-a3b-instruct:free
 ```
