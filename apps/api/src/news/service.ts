@@ -12,6 +12,9 @@ export interface SearchResult {
   title: string;
   url: string;
   snippet: string;
+  /** Publisher domain (e.g. 'investidor10.com.br') — when provided, used instead
+   * of extracting from the URL (which would give 'news.google.com' for redirects). */
+  sourceDomain?: string;
 }
 
 export interface NewsSearcher {
@@ -27,7 +30,16 @@ const DEFAULT_SEARCH_LIMIT = 5;
 const DB_FRESHNESS_WINDOW_MS = 2 * 60 * 60_000; // 2 hours
 
 function normalizeURL(raw: string): string {
-  return raw.toLowerCase().trim().replace(/\/$/, '');
+  const trimmed = raw.trim().replace(/\/$/, '');
+  try {
+    // Only lowercase the hostname — the path may contain case-sensitive base64
+    // (e.g. Google News redirect URLs: news.google.com/rss/articles/CBMi...)
+    const u = new URL(trimmed);
+    u.hostname = u.hostname.toLowerCase();
+    return u.toString().replace(/\/$/, '');
+  } catch {
+    return trimmed.toLowerCase();
+  }
 }
 
 function extractDomain(raw: string): string {
@@ -165,7 +177,7 @@ export class NewsService {
       articles.push({
         url,
         title: r.title,
-        source: extractDomain(r.url),
+        source: r.sourceDomain || extractDomain(r.url),
         summary: r.snippet,
         tickers: [ticker],
         ...(cat ? { category: cat } : {}),
@@ -199,7 +211,7 @@ export class NewsService {
             out.push({
               url,
               title: r.title,
-              source: extractDomain(r.url),
+              source: r.sourceDomain || extractDomain(r.url),
               summary: r.snippet,
               tickers: [ticker],
               ...(cat ? { category: cat } : {}),

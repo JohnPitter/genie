@@ -25,7 +25,14 @@ interface ArticleRow {
 }
 
 function normalizeURL(u: string): string {
-  return u.toLowerCase().trim().replace(/\/$/, '');
+  const trimmed = u.trim().replace(/\/$/, '');
+  try {
+    const parsed = new URL(trimmed);
+    parsed.hostname = parsed.hostname.toLowerCase();
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return trimmed.toLowerCase();
+  }
 }
 
 function rowToArticle(row: ArticleRow): Article {
