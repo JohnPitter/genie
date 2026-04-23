@@ -10,12 +10,14 @@ const DEFAULT_MAX_STEPS = 20;
  * OPENROUTER_MODEL_FALLBACK mas está usando um modelo `:free` que pode
  * falhar. Garante que todo deploy tenha resiliência mesmo sem config extra.
  * Ordem baseada no benchmark (bench-models.ts): estáveis + rápidos primeiro.
+ *
+ * OpenRouter aceita máx 3 modelos por request, então mantemos apenas os 2
+ * melhores como fallback (primário + 2 = 3 total após cascade assembly).
  */
 const EMERGENCY_FREE_FALLBACKS = [
   'openai/gpt-oss-120b:free',
   'openai/gpt-oss-20b:free',
   'nvidia/nemotron-3-nano-30b-a3b:free',
-  'minimax/minimax-m2.5:free',
 ];
 
 export interface TokenUsage {
@@ -79,8 +81,11 @@ export class QueryLoop {
   ): Promise<Message[]> {
     const tools = this.registry.schemas();
 
+    // OpenRouter aceita no máximo 3 modelos no array `models`.
+    // Priorizamos primário + 2 primeiros fallbacks.
+    const MAX_MODELS = 3;
     const modelsChain = this.fallbackModels.length > 0
-      ? [this.model, ...this.fallbackModels]
+      ? [this.model, ...this.fallbackModels].slice(0, MAX_MODELS)
       : undefined;
 
     for (let step = 0; step < this.maxSteps; step++) {

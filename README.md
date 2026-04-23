@@ -123,8 +123,10 @@ Defina `OPENROUTER_MODEL_FALLBACK` como lista separada por vírgula. O OpenRoute
 
 ```
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
-OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,nvidia/nemotron-3-nano-30b-a3b:free,minimax/minimax-m2.5:free
+OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,nvidia/nemotron-3-nano-30b-a3b:free
 ```
+
+> **Limite do OpenRouter:** máximo de 3 modelos por request (primário + 2 fallbacks). Modelos extras são ignorados.
 
 ### Painel Admin
 
