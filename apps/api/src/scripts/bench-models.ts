@@ -12,18 +12,22 @@ import { SYSTEM_PROMPT } from '../agent/prompt.ts';
 import { getConfig } from '../lib/config.ts';
 
 const MODELS = [
+  // Candidatos do usuário
   'nvidia/nemotron-3-super-120b-a12b:free',
-  'qwen/qwen3-next-80b-a3b-instruct:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'google/gemma-4-31b-it:free',
+  // Top performers prévios (pra comparação)
   'openai/gpt-oss-120b:free',
   'openai/gpt-oss-20b:free',
-  'z-ai/glm-4.5-air:free',
-  'google/gemma-3-27b-it:free',
-  'nousresearch/hermes-3-llama-3.1-405b:free',
-  'qwen/qwen3-coder:free',
   'nvidia/nemotron-3-nano-30b-a3b:free',
   'minimax/minimax-m2.5:free',
   'tencent/hy3-preview:free',
+  // Outros candidatos free
+  'qwen/qwen3-next-80b-a3b-instruct:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'z-ai/glm-4.5-air:free',
+  'qwen/qwen3-coder:free',
+  'inclusionai/ling-2.6-flash:free',
 ];
 
 const TOOLS = [

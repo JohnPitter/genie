@@ -123,7 +123,7 @@ Defina `OPENROUTER_MODEL_FALLBACK` como lista separada por vírgula. O OpenRoute
 
 ```
 OPENROUTER_MODEL=openai/gpt-oss-120b:free
-OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,nvidia/nemotron-3-nano-30b-a3b:free
+OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,inclusionai/ling-2.6-flash:free
 ```
 
 > **Limite do OpenRouter:** máximo de 3 modelos por request (primário + 2 fallbacks). Modelos extras são ignorados.
@@ -272,15 +272,22 @@ Resultado do benchmark (`bench-models.ts`) rodado no contexto real do Genie — 
 
 | Pos | Modelo | TTFT médio | Status |
 |---|---|---|---|
-| 🥇 | `openai/gpt-oss-120b:free` | ~2.0s | ✅ recomendado como primário |
-| 🥈 | `openai/gpt-oss-20b:free` | ~1.7s | ✅ bom fallback rápido |
-| 🥉 | `nvidia/nemotron-3-nano-30b-a3b:free` | ~1.8s | ✅ alternativa estável |
-| 4º | `minimax/minimax-m2.5:free` | ~2.5s | ✅ backup confiável |
-| ⚠️ | `nvidia/nemotron-3-super-120b-a12b:free` | ~18s | Funciona, mas lento |
-| ❌ | `qwen/qwen3-next-80b-a3b-instruct:free` | — | Rate-limit frequente |
+| 🥇 | `inclusionai/ling-2.6-flash:free` | **0.81s** | ✅ super rápido, bom fallback |
+| 🥈 | `openai/gpt-oss-20b:free` | 1.22s | ✅ rápido e confiável |
+| 🥉 | `openai/gpt-oss-120b:free` | 1.41s | ✅ **recomendado como primário** (maior capacidade) |
+| 4º | `minimax/minimax-m2.5:free` | 1.95s | ✅ backup confiável |
+| 5º | `tencent/hy3-preview:free` | 2.45s | ✅ alternativa |
+| 6º | `nvidia/nemotron-3-nano-30b-a3b:free` | 2.61s | ✅ alternativa estável |
+| ⚠️ | `nvidia/nemotron-3-super-120b-a12b:free` | 4.49s | Funciona, mais lento (e flutua muito: já chegou a 18s) |
+| ❌ | `qwen/qwen3-next-80b-a3b-instruct:free` | — | Rate-limit frequente (provider Venice) |
+| ❌ | `meta-llama/llama-3.3-70b-instruct:free` | — | Rate-limit frequente |
+| ❌ | `google/gemma-4-26b-a4b-it:free` | — | Rate-limit frequente |
+| ❌ | `google/gemma-4-31b-it:free` | — | Rate-limit frequente |
 | ❌ | `google/gemma-3-27b-it:free` | — | Sem suporte a tool use |
 
-> Os modelos `:free` mudam de disponibilidade com o tempo. Rode o benchmark periodicamente para atualizar o ranking.
+Config padrão escolhida prioriza **capacidade + velocidade**: `gpt-oss-120b` como primário (120B de parâmetros, 1.4s TTFT), com `gpt-oss-20b` e `ling-2.6-flash` como fallbacks progressivamente mais rápidos.
+
+> Os modelos `:free` mudam de disponibilidade com o tempo. Rode o benchmark periodicamente (`cd apps/api && node_modules/.bin/tsx src/scripts/bench-models.ts`) para atualizar o ranking.
 
 ---
 

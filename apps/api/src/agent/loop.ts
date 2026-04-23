@@ -17,7 +17,7 @@ const DEFAULT_MAX_STEPS = 20;
 const EMERGENCY_FREE_FALLBACKS = [
   'openai/gpt-oss-120b:free',
   'openai/gpt-oss-20b:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
+  'inclusionai/ling-2.6-flash:free',
 ];
 
 export interface TokenUsage {
