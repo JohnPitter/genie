@@ -4,6 +4,17 @@ import CategoryTabs from './CategoryTabs.svelte';
 import { ALL_CATEGORIES } from '@genie/shared';
 import type { Category } from '@genie/shared';
 
+// Labels now include emoji prefixes — match by partial text content
+const LABEL_FRAGMENTS: Record<string, string> = {
+  financeiro:  'Financeiro',
+  commodities: 'Commodities',
+  varejo:      'Varejo',
+  energia:     'Energia',
+  saneamento:  'Saneamento',
+  tecnologia:  'Tecnologia',
+  saude:       'Saúde',
+};
+
 describe('CategoryTabs', () => {
   it('renders all categories', () => {
     const { container } = render(CategoryTabs, {
@@ -19,20 +30,18 @@ describe('CategoryTabs', () => {
     });
     const activePill = container.querySelector('.category-tabs__pill--active');
     expect(activePill).toBeInTheDocument();
-    expect(activePill?.textContent?.trim()).toBe('Commodities');
+    expect(activePill?.textContent?.trim()).toContain('Commodities');
   });
 
-  it('renders Portuguese labels', () => {
-    const { getByText } = render(CategoryTabs, {
+  it('renders Portuguese labels (with emoji prefix)', () => {
+    const { container } = render(CategoryTabs, {
       props: { categories: ALL_CATEGORIES, active: 'financeiro' },
     });
-    expect(getByText('Financeiro')).toBeInTheDocument();
-    expect(getByText('Commodities')).toBeInTheDocument();
-    expect(getByText('Varejo')).toBeInTheDocument();
-    expect(getByText('Energia')).toBeInTheDocument();
-    expect(getByText('Saneamento')).toBeInTheDocument();
-    expect(getByText('Tecnologia')).toBeInTheDocument();
-    expect(getByText('Saúde')).toBeInTheDocument();
+    const pills = container.querySelectorAll('.category-tabs__pill');
+    const texts = Array.from(pills).map(p => p.textContent?.trim() ?? '');
+    for (const fragment of Object.values(LABEL_FRAGMENTS)) {
+      expect(texts.some(t => t.includes(fragment))).toBe(true);
+    }
   });
 
   it('dispatches change event on click', async () => {
@@ -43,7 +52,6 @@ describe('CategoryTabs', () => {
     component.$on('change', handler);
 
     const pills = container.querySelectorAll('.category-tabs__pill');
-    // Click the second pill (commodities)
     await fireEvent.click(pills[1]);
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -56,7 +64,7 @@ describe('CategoryTabs', () => {
     });
     const activePill = container.querySelector('[aria-selected="true"]');
     expect(activePill).toBeInTheDocument();
-    expect(activePill?.textContent?.trim()).toBe('Varejo');
+    expect(activePill?.textContent?.trim()).toContain('Varejo');
   });
 
   it('inactive pills have aria-selected=false', () => {
@@ -76,7 +84,7 @@ describe('CategoryTabs', () => {
     await fireEvent.click(pills[3]); // energia
 
     const newActive = container.querySelector('.category-tabs__pill--active');
-    expect(newActive?.textContent?.trim()).toBe('Energia');
+    expect(newActive?.textContent?.trim()).toContain('Energia');
   });
 
   it('renders nav with accessible label', () => {

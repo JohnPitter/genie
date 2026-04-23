@@ -10,7 +10,7 @@ const nop = pino({ level: 'silent' });
 function makeLLM(chunks: StreamChunk[][]): OpenRouterClient {
   let call = 0;
   return {
-    streamChat: async function* (_req, _signal) {
+    streamChat: async function* (_req: unknown, _signal: unknown) {
       const batch = chunks[call++ % chunks.length] ?? [];
       for (const c of batch) yield c;
     },

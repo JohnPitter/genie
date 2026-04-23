@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 
-// Mock $app/stores before importing Sidebar
 vi.mock('$app/stores', () => {
   const { readable } = require('svelte/store');
   return {
@@ -39,11 +38,11 @@ describe('Sidebar', () => {
     expect(favLink.getAttribute('href')).toBe('/favorites');
   });
 
-  it('nav item "/settings" has correct href', () => {
+  it('nav item "/rankings" has correct href', () => {
     render(Sidebar);
-    const settingsLink = screen.getByRole('link', { name: /configurações/i });
-    expect(settingsLink).toBeInTheDocument();
-    expect(settingsLink.getAttribute('href')).toBe('/settings');
+    const rankLink = screen.getByRole('link', { name: /rankings/i });
+    expect(rankLink).toBeInTheDocument();
+    expect(rankLink.getAttribute('href')).toBe('/rankings');
   });
 
   it('active "/" item has aria-current="page"', () => {
@@ -60,7 +59,14 @@ describe('Sidebar', () => {
 
   it('shows version label', () => {
     render(Sidebar);
-    expect(screen.getByText('v0.1.0')).toBeInTheDocument();
+    // Version label is part of "v2.0.0 · online" text
+    const versionEl = screen.getByText(/v2\.0\.0/);
+    expect(versionEl).toBeInTheDocument();
+  });
+
+  it('shows online status dot', () => {
+    const { container } = render(Sidebar);
+    expect(container.querySelector('.sidebar__status-dot')).not.toBeNull();
   });
 
   it('adds collapsed class when collapsed prop is true', () => {

@@ -78,10 +78,25 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+// Escape raw HTML tags that slip through marked (XSS prevention).
+// We allow only the tags that our own renderer explicitly emits.
+const ALLOWED_TAGS = new Set([
+  'p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody',
+  'tr', 'th', 'td', 'div', 'span', 'blockquote',
+]);
+
+function sanitizeHtml(html: string): string {
+  // Escape any tag whose name is not in the allowlist
+  return html.replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (match, tag: string) => {
+    return ALLOWED_TAGS.has(tag.toLowerCase()) ? match : match.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  });
+}
+
 export function renderMarkdown(text: string): string {
   if (!text) return '';
   const html = marked.parse(text, { renderer, async: false }) as string;
-  return html;
+  return sanitizeHtml(html);
 }
 
 // Keep for backwards compat — now delegates to full renderer

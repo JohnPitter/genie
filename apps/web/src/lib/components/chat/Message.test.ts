@@ -72,9 +72,10 @@ describe('Message', () => {
     expect(container.querySelector('.message__content')?.textContent).toContain('PETR4');
   });
 
-  it('shows typing indicator when streaming with empty content', () => {
+  it('shows thinking pill when streaming with empty content', () => {
     const { container } = render(Message, { props: { message: streamingMsg } });
-    expect(container.querySelector('.message__typing-indicator')).toBeInTheDocument();
+    // Typing is now shown via .message__tool-activity pill ("Analisando sua pergunta")
+    expect(container.querySelector('.message__tool-activity')).toBeInTheDocument();
   });
 
   it('shows error badge on error status', () => {
@@ -87,9 +88,15 @@ describe('Message', () => {
     expect(container.querySelector('.message--error')).toBeInTheDocument();
   });
 
-  it('renders tool calls when present', () => {
-    const { getByText } = render(Message, { props: { message: msgWithToolCalls } });
-    expect(getByText('b3_quote')).toBeInTheDocument();
+  it('renders tool call activity pill when streaming with running tool', () => {
+    const streamingWithTool: ChatMessage = {
+      ...msgWithToolCalls,
+      status: 'streaming',
+      content: '',
+      toolCalls: [{ id: 'tc1', name: 'b3_quote', args: {}, result: null, durationMs: 0, status: 'running' }],
+    };
+    const { container } = render(Message, { props: { message: streamingWithTool } });
+    expect(container.querySelector('.message__tool-activity')).toBeInTheDocument();
   });
 
   it('renders content as markdown - bold text', () => {

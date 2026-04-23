@@ -25,7 +25,7 @@ function extractCells(html: string): string[] {
   const rowRegex = /<td[^>]*>([\s\S]*?)<\/td>/g;
   let m: RegExpExecArray | null;
   while ((m = rowRegex.exec(decoded)) !== null) {
-    const text = m[1].replace(/<[^>]+>/g, '').trim();
+    const text = (m[1] ?? '').replace(/<[^>]+>/g, '').trim();
     if (text.length > 0 && text.length < 120) {
       cells.push(text);
     }

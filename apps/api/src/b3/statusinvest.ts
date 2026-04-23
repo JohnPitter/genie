@@ -123,16 +123,24 @@ export class StatusInvestScraper implements Source {
   private parsePrice($: cheerio.CheerioAPI): number | null {
     let raw = '';
 
-    $('[data-title="Valor atual"] .value-top strong.value, [data-title="Valor atual"] strong.value').each(
-      (_i, el) => {
-        if (!raw) raw = $(el).text().trim();
-      },
-    );
+    // Layout 2025: h3.title "Valor atual" + adjacent strong.value (no data-title attr)
+    $('h3.title').each((_i, el) => {
+      if (raw) return;
+      if ($(el).text().trim() === 'Valor atual') {
+        raw = $(el).closest('div').find('strong.value').first().text().trim();
+      }
+    });
 
+    // Fallback: legacy layout with data-title attribute
     if (!raw) {
-      $('.value-top strong.value').each((_i, el) => {
-        if (!raw) raw = $(el).text().trim();
-      });
+      $('[data-title="Valor atual"] strong.value, [data-title="Valor atual"] .value-top strong.value').each(
+        (_i, el) => { if (!raw) raw = $(el).text().trim(); },
+      );
+    }
+
+    // Last resort: first strong.value on the page
+    if (!raw) {
+      $('strong.value').each((_i, el) => { if (!raw) raw = $(el).text().trim(); });
     }
 
     return raw ? parseBrazilianFloat(raw) : null;
@@ -140,15 +148,35 @@ export class StatusInvestScraper implements Source {
 
   private parseChangePct($: cheerio.CheerioAPI): number {
     let raw = '';
-    $('[data-title="Variação"] .value-top strong.value, [data-title="Variação"] strong.value').each(
-      (_i, el) => {
-        if (!raw) raw = $(el).text().trim();
-      },
-    );
+
+    // Layout 2025: look for span.sub-value near "Valor atual" section
+    // The change % is in a span with class containing "sub-value" right after strong.value
+    $('h3.title').each((_i, el) => {
+      if (raw) return;
+      if ($(el).text().trim() === 'Valor atual') {
+        const wrapper = $(el).closest('div').parent();
+        const subVal = wrapper.find('.sub-value').first().text().trim();
+        if (subVal) raw = subVal;
+      }
+    });
+
+    // Fallback: legacy data-title attribute
+    if (!raw) {
+      $('[data-title="Variação"] strong.value, [data-title="Variação"] .value-top strong.value').each(
+        (_i, el) => { if (!raw) raw = $(el).text().trim(); },
+      );
+    }
+
     return parseBrazilianFloat(raw) ?? 0;
   }
 
   private parseName($: cheerio.CheerioAPI): string {
-    return $('h1.lp-title').first().text().trim() || $('.company-description h1').first().text().trim();
+    // Try various selectors — page layout changes across versions
+    return (
+      $('h1.lp-title').first().text().trim() ||
+      $('.company-description h1').first().text().trim() ||
+      $('h1').first().text().trim() ||
+      ''
+    );
   }
 }
