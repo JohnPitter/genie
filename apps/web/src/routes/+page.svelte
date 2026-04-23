@@ -96,7 +96,7 @@
 
       <div class="home__hero-input">
         <ChatInput
-          placeholder="Ex: PETR4, dividendos, fundamentos, rankings..."
+          placeholder={isMobile ? 'Ex: PETR4, dividendos...' : 'Ex: PETR4, dividendos, fundamentos, rankings...'}
           loading={streaming}
           on:submit={handleHeroSubmit}
         />

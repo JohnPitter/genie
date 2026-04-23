@@ -3,6 +3,9 @@
   import { Send, Loader2 } from 'lucide-svelte';
 
   export let placeholder = 'Pergunte sobre qualquer ação da B3...';
+  /** Placeholder usado em mobile. Se vazio, deriva automaticamente do prop
+   * `placeholder` cortando em 25 chars com reticências. */
+  export let placeholderMobile = '';
   export let disabled = false;
   export let loading = false;
 
@@ -10,12 +13,16 @@
 
   let value = '';
   let textareaEl: HTMLTextAreaElement;
+  let innerWidth = 1024;
 
   const MAX_ROWS = 4;
   const LINE_HEIGHT = 22; // px, matches CSS line-height
 
   $: isDisabled = disabled || loading;
   $: canSubmit = value.trim().length > 0 && !isDisabled;
+  $: isMobile = innerWidth <= 768;
+  $: autoMobile = placeholder.length > 28 ? placeholder.slice(0, 25).trimEnd() + '…' : placeholder;
+  $: effectivePlaceholder = isMobile ? (placeholderMobile || autoMobile) : placeholder;
 
   function submit() {
     const trimmed = value.trim();
@@ -49,6 +56,8 @@
   }
 </script>
 
+<svelte:window bind:innerWidth />
+
 <form
   class="chat-input"
   class:chat-input--loading={loading}
@@ -59,7 +68,7 @@
     bind:this={textareaEl}
     bind:value
     class="chat-input__textarea"
-    {placeholder}
+    placeholder={effectivePlaceholder}
     disabled={isDisabled}
     rows={1}
     aria-label="Mensagem para o Genie"
@@ -130,6 +139,13 @@
     /* Scrollbar only appears when at max height */
     max-height: calc(22px * 4 + 16px);
     overflow-y: auto;
+  }
+
+  /* Mobile: padding horizontal menor para aproveitar melhor o espaço */
+  @media (max-width: 768px) {
+    .chat-input__textarea {
+      padding: var(--space-md) var(--space-md);
+    }
   }
 
   .chat-input__textarea::placeholder {
