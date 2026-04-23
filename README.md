@@ -6,6 +6,7 @@
 
 **Assistente financeiro de B3 com IA — cotações, fundamentos, notícias e chat em tempo real.**
 
+[![CI](https://github.com/JohnPitter/genie/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JohnPitter/genie/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://kit.svelte.dev)
 [![Fastify](https://img.shields.io/badge/Fastify-5-000000?style=flat-square&logo=fastify&logoColor=white)](https://fastify.dev)
@@ -35,11 +36,13 @@ Genie é um assistente financeiro especializado na B3 (bolsa de valores brasilei
 | **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático |
 | **Fundamentos** | P/L, P/VP, Dividend Yield, ROE, Dív/Patrim., Margem Líquida |
 | **Busca de tickers** | Busca por prefixo em +150 ativos catalogados em 7 setores |
-| **Notícias** | Busca via Google News RSS por ticker/categoria com cache em SQLite |
+| **Notícias filtradas** | Busca via Google News RSS por ticker/categoria com cache em SQLite e filtro anti-ruído |
 | **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação em tempo real |
 | **Favoritos** | Adicione/remova ativos — o agente usa sua carteira como contexto nas respostas |
 | **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo ativo da B3 fica sem cotação |
 | **Jobs agendados** | Refresh diário de notícias dos favoritos e warmup de cache de cotações |
+| **Painel Admin** | `/settings` protegido por PIN, com status do sistema e disparo manual de jobs |
+| **CI/CD** | GitHub Actions com type-check, testes e build em cada PR — `main` protegida |
 | **207 testes** | Unitários, integração, e2e de paridade — todos passando |
 
 ---
@@ -108,6 +111,13 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 - **Notícias visíveis no painel** passadas como contexto — o agente já leu o que você está vendo
 - **Notícias do ativo** injetadas no chat da página do ativo — respostas mais relevantes
 
+### Painel Admin
+
+Em `/settings` você acessa com o PIN (= `ADMIN_TOKEN` do `.env`) para:
+- Ver status do sistema (API, DB, modelo LLM, versão)
+- Consultar as variáveis de ambiente em uso
+- Disparar manualmente o job de refresh de favoritos
+
 ---
 
 ## Tech Stack
@@ -122,7 +132,8 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 | **Web Search** | DuckDuckGo HTML + Google News RSS |
 | **Web Fetch** | @mozilla/readability + turndown (HTML → Markdown) |
 | **Jobs** | croner |
-| **Testes** | Vitest (207 testes) |
+| **Testes** | Vitest (207 testes API + 437 web) |
+| **CI** | GitHub Actions (type-check + tests + build) |
 | **Package manager** | pnpm workspaces |
 
 ---
@@ -147,7 +158,7 @@ pnpm install
 
 # Configure o ambiente
 cp apps/api/.env.example apps/api/.env
-# Edite apps/api/.env e preencha OPENROUTER_API_KEY
+# Edite apps/api/.env e preencha pelo menos OPENROUTER_API_KEY
 ```
 
 ### Rodar em desenvolvimento
@@ -164,7 +175,7 @@ O frontend faz proxy automático de `/api` para `localhost:5858`.
 
 ### Popular o banco com notícias iniciais
 
-Na primeira execução o banco estará vazio. Rode o seeder para popular com artigos reais via Google News:
+Na primeira execução o banco estará vazio. Rode o seeder para popular com artigos reais via Google News — já filtra páginas estáticas, YouTube e conteúdo irrelevante:
 
 ```bash
 cd apps/api && node_modules/.bin/tsx src/scripts/seed-news.ts
@@ -193,13 +204,14 @@ genie/
 │  │  │  ├─ b3/               # Cascade + 5 fontes (brapi, yfinance, statusinvest, googlefinance, fundamentus)
 │  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob
 │  │  │  ├─ news/             # NewsService (Google News RSS + SQLite cache)
-│  │  │  ├─ scripts/          # seed-news.ts — popula o banco na primeira execução
-│  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat)
+│  │  │  ├─ scripts/          # seed-news.ts — popula o banco com artigos filtrados
+│  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat, admin)
 │  │  │  ├─ store/            # SQLite repos (conversations, favorites, news)
 │  │  │  ├─ tools/            # b3_quote, b3_fundamentals, web_search, web_fetch, favorites
 │  │  │  └─ main.ts           # Bootstrap completo
 │  │  └─ tests/               # 207 testes (unit + integration + e2e parity)
 │  └─ web/                    # Frontend SvelteKit (Orb Quantum Design System)
+├─ .github/workflows/ci.yml   # CI: type-check + testes + build para API e Web
 ├─ packages/
 │  └─ shared/                 # Tipos compartilhados (Article, Quote, Fundamentals, StreamEvent…)
 ├─ tsconfig.base.json
@@ -216,6 +228,7 @@ Copie `apps/api/.env.example` para `apps/api/.env`:
 |---|---|---|
 | `OPENROUTER_API_KEY` | ✅ | Chave da API do OpenRouter |
 | `OPENROUTER_MODEL` | — | Modelo (default: `anthropic/claude-3.5-haiku`) |
+| `ADMIN_TOKEN` | — | Token que libera o painel `/settings` e rotas `/api/admin/*`. Sem isso o painel fica inacessível. |
 | `PORT` | — | Porta do servidor (default: `5858`) |
 | `DB_PATH` | — | Caminho do SQLite (default: `genie.db`) |
 | `LOG_LEVEL` | — | Nível de log pino (default: `info`) |
