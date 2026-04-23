@@ -109,7 +109,13 @@
     }
   }
 
-  async function toggleFavorite(ticker: string) {
+  async function toggleFavorite(ticker: string, event?: MouseEvent | KeyboardEvent) {
+    // Quando o botão de favorito está dentro de um <a>, precisamos impedir
+    // a navegação para /asset/[ticker] que aconteceria de qualquer outro clique.
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     if (favPending.has(ticker)) return;
     favPending = new Set(favPending).add(ticker);
 
@@ -262,7 +268,7 @@
       {@const isFav = favoriteTickers.has(r.ticker)}
       {@const isPending = favPending.has(r.ticker)}
       <div class="search-result">
-        <div class="rank-card rank-card--search">
+        <a class="rank-card rank-card--search" href="/asset/{r.ticker}" aria-label="Abrir análise de {r.ticker}">
           <span class="rank-card__pos" aria-label="Resultado de busca">
             <Search size={14} />
           </span>
@@ -298,7 +304,7 @@
             class="fav-btn"
             class:fav-btn--active={isFav}
             class:fav-btn--pending={isPending}
-            on:click={() => toggleFavorite(r.ticker)}
+            on:click={(e) => toggleFavorite(r.ticker, e)}
             aria-label={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
             disabled={isPending}
           >
@@ -308,7 +314,7 @@
               <Star size={14} fill={isFav ? 'currentColor' : 'none'} />
             {/if}
           </button>
-        </div>
+        </a>
       </div>
     {/if}
   </div>
@@ -360,11 +366,13 @@
           {@const negative = change !== null && change < 0}
           {@const isFav = favoriteTickers.has(rank.ticker)}
           {@const isPending = favPending.has(rank.ticker)}
-          <div
+          <a
             class="rank-card"
             class:rank-card--gold={i === 0}
             class:rank-card--silver={i === 1}
             class:rank-card--bronze={i === 2}
+            href="/asset/{rank.ticker}"
+            aria-label="Abrir análise de {rank.ticker}"
           >
             <span class="rank-card__pos" aria-label="Posição {i + 1}">
               {medal(i)}
@@ -406,7 +414,7 @@
               class="fav-btn"
               class:fav-btn--active={isFav}
               class:fav-btn--pending={isPending}
-              on:click={() => toggleFavorite(rank.ticker)}
+              on:click={(e) => toggleFavorite(rank.ticker, e)}
               aria-label={isFav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               disabled={isPending}
             >
@@ -416,7 +424,7 @@
                 <Star size={14} fill={isFav ? 'currentColor' : 'none'} />
               {/if}
             </button>
-          </div>
+          </a>
         {/each}
       </div>
     {/if}
@@ -569,10 +577,19 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
     transition:
       background var(--dur-fast) var(--ease-standard),
       border-color var(--dur-fast) var(--ease-standard),
-      transform var(--dur-fast) var(--ease-standard);
+      transform var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard);
+  }
+
+  .rank-card:focus-visible {
+    outline: 2px solid var(--accent-lilac);
+    outline-offset: 2px;
   }
 
   .rank-card:not(.rank-card--skeleton):not(.rank-card--search):hover {
