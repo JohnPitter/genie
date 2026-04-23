@@ -431,6 +431,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
+    overflow-x: hidden;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
   }
 
   .page__header {
@@ -754,13 +758,33 @@
     to   { transform: rotate(360deg); }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .page {
-      padding: var(--space-xl) var(--space-md);
+      padding: var(--space-md) var(--space-md) var(--space-4xl);
+    }
+
+    /* Subtitle: allow wrapping, never clip */
+    .page__subtitle {
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+
+    /* Cards: reduce price column width and hide name to fit narrow screens */
+    .rank-card {
+      padding: var(--space-md);
+      gap: var(--space-sm);
     }
 
     .rank-card__name {
       display: none;
+    }
+
+    .rank-card__right {
+      min-width: 68px;
+    }
+
+    .rank-card__price {
+      font-size: 13px;
     }
   }
 </style>
