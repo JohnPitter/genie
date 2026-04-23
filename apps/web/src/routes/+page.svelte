@@ -22,10 +22,14 @@
   $: orbState = $chatStore.orbState;
   $: streaming = $chatStore.streaming;
 
-  // Resizable chat height
+  // Resizable chat height (desktop only)
   let chatHeight = 600;
   const MIN_HEIGHT = 320;
   const MAX_HEIGHT = () => window.innerHeight - 120;
+
+  // Detect mobile to disable resize feature + use flexible height
+  let innerWidth = 1024;
+  $: isMobile = innerWidth <= 768;
 
   function startResize(e: MouseEvent | TouchEvent) {
     e.preventDefault();
@@ -82,6 +86,8 @@
   <meta property="og:description" content="Converse com o Genie para consultar cotações, fundamentos, dividendos e notícias de ações, FIIs e ETFs da B3 em tempo real." />
 </svelte:head>
 
+<svelte:window bind:innerWidth />
+
 <main class="home">
   <!-- ── Mode A: Hero (empty conversation) ──────────────── -->
   {#if !hasConversation}
@@ -109,24 +115,30 @@
           <OrbMini state={orbState} />
         </div>
 
-        <div class="home__chat-wrap" style="height: {chatHeight}px">
+        <div
+          class="home__chat-wrap"
+          class:home__chat-wrap--mobile={isMobile}
+          style={isMobile ? '' : `height: ${chatHeight}px`}
+        >
           <ChatPanel mode="inline" />
-          <!-- Resize handle -->
-          <div
-            class="home__resize-handle"
-            role="separator"
-            aria-label="Redimensionar chat"
-            aria-orientation="horizontal"
-            tabindex="0"
-            on:mousedown={startResize}
-            on:touchstart={startResize}
-            on:keydown={(e) => {
-              if (e.key === 'ArrowDown') chatHeight = Math.min(chatHeight + 20, MAX_HEIGHT());
-              if (e.key === 'ArrowUp') chatHeight = Math.max(chatHeight - 20, MIN_HEIGHT);
-            }}
-          >
-            <span class="home__resize-dots" aria-hidden="true"></span>
-          </div>
+          <!-- Resize handle — desktop only -->
+          {#if !isMobile}
+            <div
+              class="home__resize-handle"
+              role="separator"
+              aria-label="Redimensionar chat"
+              aria-orientation="horizontal"
+              tabindex="0"
+              on:mousedown={startResize}
+              on:touchstart={startResize}
+              on:keydown={(e) => {
+                if (e.key === 'ArrowDown') chatHeight = Math.min(chatHeight + 20, MAX_HEIGHT());
+                if (e.key === 'ArrowUp') chatHeight = Math.max(chatHeight - 20, MIN_HEIGHT);
+              }}
+            >
+              <span class="home__resize-dots" aria-hidden="true"></span>
+            </div>
+          {/if}
         </div>
       </div>
     </div>
@@ -305,12 +317,24 @@
       padding-top: 0;
     }
 
-    .home__chat-wrap {
-      height: 360px;
-    }
-
     .home__hero-input {
       max-width: 100%;
+    }
+
+    /* Mobile: chat ocupa altura disponível em vez de height fixa */
+    .home__chat-wrap--mobile {
+      height: auto !important;
+      flex: 1 1 auto;
+      min-height: calc(100dvh - 220px);
+      max-height: calc(100dvh - 180px);
+      width: 100%;
+      min-width: 0;
+    }
+
+    .home__conversation,
+    .home__conversation-inner {
+      width: 100%;
+      min-width: 0;
     }
   }
 

@@ -124,6 +124,8 @@
     align-items: flex-start;
     gap: var(--space-sm);
     padding: var(--space-sm) 0;
+    max-width: 100%;
+    min-width: 0;
     animation: msg-in var(--dur-medium) var(--ease-standard);
   }
 
@@ -144,6 +146,14 @@
     gap: var(--space-xs);
     max-width: 80%;
     min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  /* Mobile: dar mais largura útil já que o avatar + padding reduzem o espaço */
+  @media (max-width: 768px) {
+    .message__body {
+      max-width: calc(100% - 40px);
+    }
   }
 
   .message--user .message__body {
@@ -157,7 +167,10 @@
     font-family: var(--font-body);
     font-size: var(--text-caption);
     line-height: 1.6;
+    overflow-wrap: anywhere;
     word-break: break-word;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .message--user .message__bubble {

@@ -86,7 +86,8 @@
     flex-direction: column;
     min-width: 0;
     min-height: 100dvh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .layout__chat {

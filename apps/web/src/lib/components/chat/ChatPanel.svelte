@@ -154,6 +154,8 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* ── Inline mode ──────────────────────────────────── */
@@ -263,11 +265,26 @@
   .chat-panel__messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--space-lg) var(--space-xl);
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
     scroll-behavior: smooth;
+    min-width: 0;
+  }
+
+  /* Mobile: padding menor para maximizar largura útil das mensagens */
+  @media (max-width: 768px) {
+    .chat-panel__messages {
+      padding: var(--space-md) var(--space-sm);
+    }
+    .chat-panel__header {
+      padding: var(--space-sm) var(--space-md);
+    }
+    .chat-panel__footer {
+      padding: var(--space-sm) var(--space-md);
+    }
   }
 
   .chat-panel__messages::-webkit-scrollbar {
