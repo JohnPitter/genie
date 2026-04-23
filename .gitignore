@@ -5,6 +5,10 @@ node_modules/
 dist/
 build/
 .svelte-kit/
+coverage/
+
+# Backup binaries
+*.exe~
 
 # Environment secrets
 .env
