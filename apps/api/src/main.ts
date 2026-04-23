@@ -21,6 +21,7 @@ import { QueryLoop } from './agent/loop.ts';
 import { NewsService } from './news/service.ts';
 import { Scheduler } from './jobs/scheduler.ts';
 import { registerJobs } from './jobs/registrar.ts';
+import { DailyFavoritesJob } from './jobs/daily_favorites.ts';
 import { buildApp } from './server/app.ts';
 
 const config = getConfig();
@@ -73,12 +74,21 @@ log.info({ model: config.OPENROUTER_MODEL }, 'agent query loop initialised');
 // News service
 const newsSvc = new NewsService(db, webSearch, log);
 
-// Job scheduler
+// Job scheduler + manually-runnable daily job
 const sched = new Scheduler(log);
 registerJobs(sched, { db, newsSvc, b3: cascade, log });
+const dailyJob = new DailyFavoritesJob(db, newsSvc, log);
 
 // HTTP server
-const app = await buildApp({ db, log, b3: cascade, newsSvc, loop });
+const app = await buildApp({
+  db,
+  log,
+  b3: cascade,
+  newsSvc,
+  loop,
+  dailyJob,
+  ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),
+});
 await app.listen({ port: config.PORT, host: '0.0.0.0' });
 log.info({ port: config.PORT }, 'server listening');
 

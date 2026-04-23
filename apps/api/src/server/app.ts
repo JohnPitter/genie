@@ -6,11 +6,13 @@ import type { DB } from '../store/db.ts';
 import type { Source } from '../b3/source.ts';
 import type { NewsService } from '../news/service.ts';
 import type { QueryLoop } from '../agent/loop.ts';
+import type { DailyFavoritesJob } from '../jobs/daily_favorites.ts';
 import type { Logger } from 'pino';
 import { registerChatRoutes } from './routes/chat.ts';
 import { registerB3Routes } from './routes/b3.ts';
 import { registerNewsRoutes } from './routes/news.ts';
 import { registerFavoritesRoutes } from './routes/favorites.ts';
+import { registerAdminRoutes } from './routes/admin.ts';
 
 export const VERSION = '0.2.0';
 
@@ -20,6 +22,8 @@ export interface AppDeps {
   b3?: Source;
   newsSvc?: NewsService;
   loop?: QueryLoop;
+  dailyJob?: DailyFavoritesJob;
+  adminToken?: string;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
@@ -69,6 +73,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerNewsRoutes(app, deps);
   await registerFavoritesRoutes(app, deps);
   await registerChatRoutes(app, deps);
+  await registerAdminRoutes(app, deps);
 
   return app;
 }
