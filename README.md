@@ -11,7 +11,7 @@
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://kit.svelte.dev)
 [![Fastify](https://img.shields.io/badge/Fastify-5-000000?style=flat-square&logo=fastify&logoColor=white)](https://fastify.dev)
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![Tests](https://img.shields.io/badge/Tests-207%20passing-2D8E5E?style=flat-square)](https://vitest.dev)
+[![Tests](https://img.shields.io/badge/Tests-644%20passing-2D8E5E?style=flat-square)](https://vitest.dev)
 [![License](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](#license)
 
 [Features](#features) · [Como Funciona](#como-funciona) · [Tech Stack](#tech-stack) · [Desenvolvimento](#desenvolvimento) · [Variáveis de Ambiente](#variáveis-de-ambiente)
@@ -33,17 +33,21 @@ Genie é um assistente financeiro especializado na B3 (bolsa de valores brasilei
 | Categoria | O que você ganha |
 |---|---|
 | **Chat com IA** | Agente em português brasileiro com streaming SSE — responde perguntas sobre qualquer ativo da B3 |
+| **Retry automático** | Botão de retry em respostas com erro; o agente sempre retorna algo mesmo sem dados completos |
 | **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático |
 | **Fundamentos** | P/L, P/VP, Dividend Yield, ROE, Dív/Patrim., Margem Líquida |
 | **Busca de tickers** | Busca por prefixo em +150 ativos catalogados em 7 setores |
-| **Notícias filtradas** | Busca via Google News RSS por ticker/categoria com cache em SQLite e filtro anti-ruído |
+| **Notícias filtradas** | Google News RSS por ticker/categoria com cache SQLite e filtro anti-ruído |
 | **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação em tempo real |
 | **Favoritos** | Adicione/remova ativos — o agente usa sua carteira como contexto nas respostas |
-| **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo ativo da B3 fica sem cotação |
+| **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo da B3 fica sem cotação |
+| **Fallback de modelo** | Múltiplos modelos LLM em cascata via `OPENROUTER_MODEL_FALLBACK` — se o primário falhar, o próximo entra |
+| **Timing por step** | Logs de TTFT, duração LLM e tools por step de raciocínio — identify gargalos facilmente |
+| **Mobile-first** | Layout responsivo para iPhone SE/12/14 Pro Max — sidebar vira drawer, chat vira overlay |
 | **Jobs agendados** | Refresh diário de notícias dos favoritos e warmup de cache de cotações |
-| **Painel Admin** | `/settings` protegido por PIN, com status do sistema e disparo manual de jobs |
+| **Painel Admin** | `/settings` protegido por token, com status do sistema e disparo manual de jobs |
 | **CI/CD** | GitHub Actions com type-check, testes e build em cada PR — `main` protegida |
-| **207 testes** | Unitários, integração, e2e de paridade — todos passando |
+| **644 testes** | 207 API (unitários + integração + e2e parity) + 437 Web — todos passando |
 
 ---
 
@@ -54,7 +58,7 @@ graph TD
     USER["👤 Usuário\n(SvelteKit)"]
     CHAT["POST /api/chat/stream\nSSE streaming"]
     LOOP["🔄 QueryLoop\nagente de tool-calling"]
-    LLM["🧠 LLM via OpenRouter\nclaude / qwen / nemotron..."]
+    LLM["🧠 LLM via OpenRouter\ngpt-oss / nemotron / minimax..."]
 
     TOOLS["🛠️ Tools"]
     QUOTE["b3_quote\nb3_fundamentals\nb3_search_ticker"]
@@ -110,10 +114,21 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 - **Favoritos injetados automaticamente** na primeira mensagem — o agente sabe sua carteira
 - **Notícias visíveis no painel** passadas como contexto — o agente já leu o que você está vendo
 - **Notícias do ativo** injetadas no chat da página do ativo — respostas mais relevantes
+- **Retry em falhas** — botão de retry remove a resposta falha e reenvia; o agente sempre entrega algo mesmo sem dados completos
+- **Timing por step** nos logs — `ttftMs`, `llmMs`, `toolsMs` por cada round-trip de raciocínio
+
+### Fallback de Modelo
+
+Defina `OPENROUTER_MODEL_FALLBACK` como lista separada por vírgula. O OpenRouter tenta cada modelo em ordem se o anterior falhar (429/5xx):
+
+```
+OPENROUTER_MODEL=openai/gpt-oss-120b:free
+OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,nvidia/nemotron-3-nano-30b-a3b:free,minimax/minimax-m2.5:free
+```
 
 ### Painel Admin
 
-Em `/settings` você acessa com o PIN (= `ADMIN_TOKEN` do `.env`) para:
+Em `/settings` você acessa com o `ADMIN_TOKEN` do `.env` para:
 - Ver status do sistema (API, DB, modelo LLM, versão)
 - Consultar as variáveis de ambiente em uso
 - Disparar manualmente o job de refresh de favoritos
@@ -127,12 +142,13 @@ Em `/settings` você acessa com o PIN (= `ADMIN_TOKEN` do `.env`) para:
 | **Frontend** | SvelteKit 2 + TypeScript + CSS custom properties (Orb Quantum Design System) |
 | **Backend** | Node 22 + Fastify 5 + TypeScript |
 | **Banco** | SQLite via better-sqlite3 (WAL mode) |
-| **LLM** | OpenRouter (qualquer modelo compatível com OpenAI — use modelos `:free`) |
+| **LLM** | OpenRouter — cascade de modelos via `models: []`, suporte nativo a fallback |
 | **B3 Sources** | brapi.dev · Yahoo Finance · StatusInvest · Google Finance · Fundamentus |
-| **Web Search** | DuckDuckGo HTML + Google News RSS |
+| **Notícias** | Google News RSS (por ticker e categoria) + SQLite cache + filtro anti-ruído |
 | **Web Fetch** | @mozilla/readability + turndown (HTML → Markdown) |
+| **Web Search** | DuckDuckGo HTML (ferramenta de agente) |
 | **Jobs** | croner |
-| **Testes** | Vitest (207 testes API + 437 web) |
+| **Testes** | Vitest — 207 testes API + 437 testes Web |
 | **CI** | GitHub Actions (type-check + tests + build) |
 | **Package manager** | pnpm workspaces |
 
@@ -181,11 +197,24 @@ Na primeira execução o banco estará vazio. Rode o seeder para popular com art
 cd apps/api && node_modules/.bin/tsx src/scripts/seed-news.ts
 ```
 
+### Benchmark de modelos
+
+Para escolher qual modelo free usar ou atualizar o ranking (disponibilidade muda com o tempo):
+
+```bash
+cd apps/api && node_modules/.bin/tsx src/scripts/bench-models.ts
+```
+
+Mede TTFT, duração total e suporte a tool calling de cada modelo no contexto real do Genie.
+
 ### Testes
 
 ```bash
 # Backend (207 testes)
 pnpm api:test
+
+# Frontend (437 testes)
+pnpm web:test
 
 # Workspace inteiro
 pnpm test
@@ -204,7 +233,7 @@ genie/
 │  │  │  ├─ b3/               # Cascade + 5 fontes (brapi, yfinance, statusinvest, googlefinance, fundamentus)
 │  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob
 │  │  │  ├─ news/             # NewsService (Google News RSS + SQLite cache)
-│  │  │  ├─ scripts/          # seed-news.ts — popula o banco com artigos filtrados
+│  │  │  ├─ scripts/          # seed-news.ts · bench-models.ts
 │  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat, admin)
 │  │  │  ├─ store/            # SQLite repos (conversations, favorites, news)
 │  │  │  ├─ tools/            # b3_quote, b3_fundamentals, web_search, web_fetch, favorites
@@ -227,8 +256,9 @@ Copie `apps/api/.env.example` para `apps/api/.env`:
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `OPENROUTER_API_KEY` | ✅ | Chave da API do OpenRouter |
-| `OPENROUTER_MODEL` | — | Modelo (default: `anthropic/claude-3.5-haiku`) |
-| `ADMIN_TOKEN` | — | Token que libera o painel `/settings` e rotas `/api/admin/*`. Sem isso o painel fica inacessível. |
+| `OPENROUTER_MODEL` | — | Modelo primário (default: `openai/gpt-oss-120b:free`) |
+| `OPENROUTER_MODEL_FALLBACK` | — | Lista CSV de fallbacks — OpenRouter tenta em ordem se o primário falhar |
+| `ADMIN_TOKEN` | — | Token que libera o painel `/settings` e rotas `/api/admin/*` |
 | `PORT` | — | Porta do servidor (default: `5858`) |
 | `DB_PATH` | — | Caminho do SQLite (default: `genie.db`) |
 | `LOG_LEVEL` | — | Nível de log pino (default: `info`) |
@@ -236,13 +266,19 @@ Copie `apps/api/.env.example` para `apps/api/.env`:
 
 ### Modelos gratuitos recomendados
 
-O Genie funciona com qualquer modelo do OpenRouter que suporte tool calling:
+Resultado do benchmark (`bench-models.ts`) rodado no contexto real do Genie — mede TTFT e suporte a tool calling:
 
-```
-nvidia/nemotron-3-super-120b-a12b:free  ← recomendado (suporta tools)
-meta-llama/llama-3.3-70b-instruct:free
-qwen/qwen3-next-80b-a3b-instruct:free
-```
+| Pos | Modelo | TTFT médio | Status |
+|---|---|---|---|
+| 🥇 | `openai/gpt-oss-120b:free` | ~2.0s | ✅ recomendado como primário |
+| 🥈 | `openai/gpt-oss-20b:free` | ~1.7s | ✅ bom fallback rápido |
+| 🥉 | `nvidia/nemotron-3-nano-30b-a3b:free` | ~1.8s | ✅ alternativa estável |
+| 4º | `minimax/minimax-m2.5:free` | ~2.5s | ✅ backup confiável |
+| ⚠️ | `nvidia/nemotron-3-super-120b-a12b:free` | ~18s | Funciona, mas lento |
+| ❌ | `qwen/qwen3-next-80b-a3b-instruct:free` | — | Rate-limit frequente |
+| ❌ | `google/gemma-3-27b-it:free` | — | Sem suporte a tool use |
+
+> Os modelos `:free` mudam de disponibilidade com o tempo. Rode o benchmark periodicamente para atualizar o ranking.
 
 ---
 
