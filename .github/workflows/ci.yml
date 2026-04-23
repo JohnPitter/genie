@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── API: type-check + tests ──────────────────────────────────────────────────
+  api:
+    name: API — type-check & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        working-directory: apps/api
+        run: pnpm check
+
+      - name: Tests
+        working-directory: apps/api
+        run: pnpm test
+
+      - name: Build
+        working-directory: apps/api
+        run: pnpm build
+
+  # ── Web: type-check + tests ──────────────────────────────────────────────────
+  web:
+    name: Web — type-check & tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check (svelte-check)
+        working-directory: apps/web
+        run: pnpm check
+
+      - name: Tests
+        working-directory: apps/web
+        run: pnpm test
+
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
