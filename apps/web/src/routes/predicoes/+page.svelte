@@ -37,7 +37,7 @@
         data = {
           topBuy: [], topSell: [], all: [],
           lastRunAt: null, totalAnalysed: 0,
-          message: 'Screener ainda não foi executado. Acesse /settings como admin e clique em "Gerar predições IA" para popular o banco.',
+          message: 'As predições ainda estão sendo preparadas. Elas são atualizadas automaticamente durante o pregão — volte em alguns minutos.',
         };
       } else {
         error = msg;

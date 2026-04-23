@@ -92,6 +92,21 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2xl);
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 768px) {
+    .asset-page {
+      padding: calc(env(safe-area-inset-top, 0) + var(--space-md)) var(--space-md) var(--space-4xl);
+      gap: var(--space-lg);
+    }
+
+    .asset-page__content {
+      padding: var(--space-md) 0;
+    }
   }
 
   .asset-page__header {

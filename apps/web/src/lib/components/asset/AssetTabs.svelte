@@ -67,7 +67,12 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-md);
     width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+
+  .tabs::-webkit-scrollbar { display: none; }
 
   .tab {
     padding: var(--space-sm) var(--space-xl);
@@ -78,9 +83,15 @@
     font-size: 14px;
     font-family: var(--font-body);
     cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
     transition:
       background var(--dur-fast) var(--ease-standard),
       color var(--dur-fast) var(--ease-standard);
+  }
+
+  @media (max-width: 600px) {
+    .tab { padding: var(--space-sm) var(--space-md); font-size: 13px; }
   }
 
   .tab:hover:not(.active) {

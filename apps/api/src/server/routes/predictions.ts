@@ -19,7 +19,7 @@ export async function registerPredictionsRoutes(app: FastifyInstance, deps: AppD
         all: [],
         lastRunAt: null,
         totalAnalysed: 0,
-        message: 'Nenhuma análise disponível ainda. O primeiro screener roda às 10:15 BRT em dias úteis.',
+        message: 'As predições ainda estão sendo preparadas. Volte em alguns minutos.',
       });
     }
 

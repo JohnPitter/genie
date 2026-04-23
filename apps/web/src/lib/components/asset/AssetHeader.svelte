@@ -74,6 +74,13 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-xl);
+    min-width: 0;
+  }
+
+  .asset-header__left {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
   }
 
   .asset-header__ticker {
@@ -88,6 +95,9 @@
     font-size: 14px;
     color: var(--text-muted);
     margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .asset-header__favorite {
@@ -101,10 +111,24 @@
     color: var(--text-muted);
     font-size: 13px;
     cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
     transition:
       color var(--dur-fast) var(--ease-standard),
       border-color var(--dur-fast) var(--ease-standard),
       background var(--dur-fast) var(--ease-standard);
+  }
+
+  /* Mobile: smaller price + gap + show only icon on favorite button to save space */
+  @media (max-width: 600px) {
+    .asset-header { gap: var(--space-sm); }
+    .asset-header__ticker { font-size: 26px; }
+    .asset-header__favorite {
+      padding: var(--space-sm);
+      font-size: 0;
+      gap: 0;
+    }
+    .asset-header__favorite :global(svg) { width: 18px; height: 18px; }
   }
 
   .asset-header__favorite:hover {
@@ -137,6 +161,13 @@
     font-family: var(--font-technical, monospace);
     font-size: 20px;
     font-weight: 600;
+  }
+
+  @media (max-width: 600px) {
+    .asset-price { flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); }
+    .asset-price__value { font-size: 36px; }
+    .asset-price__change { font-size: 16px; }
+    .asset-meta { gap: var(--space-lg); flex-wrap: wrap; margin-top: var(--space-md); }
   }
 
   .text-success { color: var(--status-success); }
