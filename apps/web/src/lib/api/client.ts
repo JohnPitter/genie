@@ -1,4 +1,4 @@
-import type { Article, Quote, Fundamentals, Favorite, FavoriteEnriched } from '@genie/shared';
+import type { Article, Quote, Fundamentals, Favorite, FavoriteEnriched, StockAnalysis } from '@genie/shared';
 
 // ── ApiError ─────────────────────────────────────────────────────────────────
 
@@ -94,6 +94,14 @@ export class ApiClient {
 
   removeFavorite(ticker: string): Promise<void> {
     return this.request<void>('DELETE', `/api/favorites/${encodeURIComponent(ticker)}`);
+  }
+
+  /**
+   * Fetches AI-powered technical analysis for a B3 ticker.
+   * Takes 10-30s on first call (LLM + historical data). Cached 30min server-side.
+   */
+  getStockAnalysis(ticker: string): Promise<StockAnalysis> {
+    return this.request<StockAnalysis>('GET', `/api/b3/analysis/${encodeURIComponent(ticker)}`);
   }
 
   /** Validates the admin token. Returns true if the token grants access, false otherwise. */

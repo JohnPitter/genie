@@ -95,6 +95,72 @@ export const ALL_CATEGORIES: Category[] = [
   'saude',
 ];
 
+// ── Technical Analysis ───────────────────────────────────────────────────────
+
+export interface MACD {
+  line: number;
+  signal: number;
+  histogram: number;
+}
+
+export interface BollingerBands {
+  upper: number;
+  middle: number;
+  lower: number;
+  /** Percentage of price position within the bands (0=lower, 100=upper) */
+  percentB: number;
+}
+
+export interface TechnicalIndicators {
+  sma20: number | null;
+  sma50: number | null;
+  rsi14: number | null;
+  macd: MACD | null;
+  bollinger: BollingerBands | null;
+  /** Price return over last 30 trading days (%) */
+  return30d: number | null;
+  /** Annualised volatility over last 30 trading days (%) */
+  volatility30d: number | null;
+  /** 52-week high */
+  high52w: number | null;
+  /** 52-week low */
+  low52w: number | null;
+}
+
+export interface AIAnalysis {
+  sinal: 'compra' | 'venda' | 'neutro';
+  confianca: 'baixa' | 'media' | 'alta';
+  tendencia_curto: 'alta' | 'lateral' | 'baixa';
+  tendencia_medio: 'alta' | 'lateral' | 'baixa';
+  suporte: number;
+  resistencia: number;
+  positivos: string[];
+  negativos: string[];
+  racional: string;
+  horizonte: '1 semana' | '1 mês' | '3 meses';
+}
+
+export interface HistoryPoint {
+  date: string;  // YYYY-MM-DD
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface StockAnalysis {
+  ticker: string;
+  name: string;
+  price: number;
+  changePct: number;
+  indicators: TechnicalIndicators;
+  analysis: AIAnalysis;
+  /** Last 60 trading days for sparkline / mini chart */
+  history: HistoryPoint[];
+  generatedAt: string;  // ISO 8601
+}
+
 // ── SSE streaming events ─────────────────────────────────────────────────────
 
 export interface TokenUsage {

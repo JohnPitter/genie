@@ -13,6 +13,7 @@ import { registerB3Routes } from './routes/b3.ts';
 import { registerNewsRoutes } from './routes/news.ts';
 import { registerFavoritesRoutes } from './routes/favorites.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
+import { registerAnalysisRoutes } from './routes/analysis.ts';
 
 export const VERSION = '0.2.0';
 
@@ -75,6 +76,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerFavoritesRoutes(app, deps);
   await registerChatRoutes(app, deps);
   await registerAdminRoutes(app, deps);
+  await registerAnalysisRoutes(app, deps);
 
   return app;
 }
