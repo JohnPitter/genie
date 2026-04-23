@@ -221,6 +221,12 @@
   .message__content :global(a:hover) {
     color: var(--accent-white);
   }
+  .message__content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border-soft);
+    margin: var(--space-md) 0;
+    opacity: 0.6;
+  }
 
   /* ── Typing indicator ────────────────────────────── */
   .message__typing-indicator {

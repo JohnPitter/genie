@@ -81,9 +81,10 @@ function escapeHtml(str: string): string {
 // Escape raw HTML tags that slip through marked (XSS prevention).
 // We allow only the tags that our own renderer explicitly emits.
 const ALLOWED_TAGS = new Set([
-  'p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li',
+  'p', 'br', 'hr', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody',
   'tr', 'th', 'td', 'div', 'span', 'blockquote',
+  's', 'del', 'sub', 'sup', 'mark',
 ]);
 
 function sanitizeHtml(html: string): string {
