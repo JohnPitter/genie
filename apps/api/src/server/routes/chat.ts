@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { AppDeps } from '../app.ts';
-import { buildMessages } from '../../agent/prompt.ts';
+import { buildMessages, detectPromptInjection } from '../../agent/prompt.ts';
 import { createConversation, appendMessage, getMessages } from '../../store/conversations.ts';
 import type { Message } from '../../agent/message.ts';
 
@@ -28,6 +28,18 @@ export async function registerChatRoutes(app: FastifyInstance, deps: AppDeps): P
 
     if (!message?.trim()) {
       return reply.status(400).send({ error: 'message is required' });
+    }
+
+    // Detecta tentativas de prompt injection em linguagem natural.
+    // Não bloqueamos (pode haver falso-positivo em perguntas legítimas) —
+    // apenas logamos para telemetria; as defesas do prompt (sandwich +
+    // sanitização + system rules) continuam ativas.
+    const detection = detectPromptInjection(message);
+    if (detection.suspicious) {
+      deps.log.warn(
+        { patterns: detection.patterns, preview: message.slice(0, 120), conversationId },
+        'chat: possible prompt injection attempt detected',
+      );
     }
 
     if (!conversationId) {
