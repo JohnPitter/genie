@@ -5,6 +5,19 @@ import type { Logger } from 'pino';
 
 const DEFAULT_MAX_STEPS = 20;
 
+/**
+ * Emergency fallback chain — usado quando o usuário NÃO configurou
+ * OPENROUTER_MODEL_FALLBACK mas está usando um modelo `:free` que pode
+ * falhar. Garante que todo deploy tenha resiliência mesmo sem config extra.
+ * Ordem baseada no benchmark (bench-models.ts): estáveis + rápidos primeiro.
+ */
+const EMERGENCY_FREE_FALLBACKS = [
+  'openai/gpt-oss-120b:free',
+  'openai/gpt-oss-20b:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free',
+  'minimax/minimax-m2.5:free',
+];
+
 export interface TokenUsage {
   promptTokens: number;
   completionTokens: number;
@@ -39,11 +52,24 @@ export class QueryLoop {
   ) {
     this.maxSteps = opts.maxSteps ?? DEFAULT_MAX_STEPS;
     const raw = opts.fallbackModels;
-    this.fallbackModels = Array.isArray(raw)
+    const configured = Array.isArray(raw)
       ? raw.filter(m => m.trim().length > 0)
       : typeof raw === 'string'
         ? raw.split(',').map(s => s.trim()).filter(s => s.length > 0)
         : [];
+
+    // Auto-fallback para deploys com .env antigo: se o usuário usa um modelo
+    // `:free` sem configurar fallbacks, aplicamos a cascata de emergência.
+    // Filtramos o próprio modelo primário da lista para não duplicar.
+    if (configured.length === 0 && model.endsWith(':free')) {
+      this.fallbackModels = EMERGENCY_FREE_FALLBACKS.filter(m => m !== model);
+      this.log.info(
+        { primary: model, fallbacks: this.fallbackModels },
+        'agent: no fallbacks configured — using emergency free cascade',
+      );
+    } else {
+      this.fallbackModels = configured;
+    }
   }
 
   async run(
