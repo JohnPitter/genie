@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.svg" width="140" height="140" alt="Genie orb logo" />
+
 # Genie
 
 **Assistente financeiro de B3 com IA — cotações, fundamentos, notícias e chat em tempo real.**

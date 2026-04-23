@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Outer glow -->
+    <radialGradient id="outerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#A79BFF" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#6C42FF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#050507" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Core gradient -->
+    <radialGradient id="orbCore" cx="38%" cy="34%" r="62%">
+      <stop offset="0%"  stop-color="#EDEBFF"/>
+      <stop offset="30%" stop-color="#C4BBFF"/>
+      <stop offset="65%" stop-color="#A79BFF"/>
+      <stop offset="100%" stop-color="#6C42FF"/>
+    </radialGradient>
+    <!-- Inner shimmer -->
+    <radialGradient id="shimmer" cx="30%" cy="28%" r="45%">
+      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Ring gradient -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#CFC29A" stop-opacity="0.7"/>
+      <stop offset="50%"  stop-color="#A79BFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#CFC29A" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="blur4">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <filter id="blur8">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="blur2">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient glow layer (breathes) -->
+  <circle cx="100" cy="100" r="88" fill="url(#outerGlow)" filter="url(#blur8)">
+    <animate attributeName="r" values="80;92;80" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+    <animate attributeName="opacity" values="0.7;1;0.7" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+  </circle>
+
+  <!-- Orbit ring -->
+  <ellipse cx="100" cy="100" rx="72" ry="18" fill="none" stroke="url(#ringGrad)" stroke-width="1.2" opacity="0.6">
+    <animateTransform attributeName="transform" type="rotate" from="0 100 100" to="360 100 100" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.4;0.7;0.4" dur="3.5s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- Orbit ring 2 (tilted) -->
+  <ellipse cx="100" cy="100" rx="68" ry="22" fill="none" stroke="url(#ringGrad)" stroke-width="0.8" opacity="0.35" transform="rotate(60 100 100)">
+    <animateTransform attributeName="transform" type="rotate" from="60 100 100" to="420 100 100" dur="12s" repeatCount="indefinite"/>
+  </ellipse>
+
+  <!-- Soft halo -->
+  <circle cx="100" cy="100" r="58" fill="#6C42FF" opacity="0.18" filter="url(#blur4)">
+    <animate attributeName="r" values="54;62;54" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+    <animate attributeName="opacity" values="0.14;0.24;0.14" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+  </circle>
+
+  <!-- Main orb body -->
+  <circle cx="100" cy="100" r="50" fill="url(#orbCore)">
+    <animate attributeName="r" values="47;52;47" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+  </circle>
+
+  <!-- Specular highlight -->
+  <circle cx="84" cy="82" r="18" fill="url(#shimmer)" opacity="0.75" filter="url(#blur2)">
+    <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+  </circle>
+
+  <!-- Tiny bright dot -->
+  <circle cx="80" cy="78" r="5" fill="#FFFFFF" opacity="0.95" filter="url(#blur2)"/>
+
+  <!-- Orbiting particle 1 -->
+  <circle r="4" fill="#CFC29A" opacity="0.9" filter="url(#blur2)">
+    <animateMotion dur="4s" repeatCount="indefinite">
+      <mpath href="#orbit1"/>
+    </animateMotion>
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <path id="orbit1" d="M 28,100 a72,18 0 1,1 144,0 a72,18 0 1,1 -144,0" fill="none"/>
+
+  <!-- Orbiting particle 2 -->
+  <circle r="2.5" fill="#A79BFF" opacity="0.8" filter="url(#blur2)">
+    <animateMotion dur="6s" repeatCount="indefinite" begin="-3s">
+      <mpath href="#orbit2"/>
+    </animateMotion>
+    <animate attributeName="opacity" values="0.3;0.9;0.3" dur="6s" repeatCount="indefinite" begin="-3s"/>
+  </circle>
+  <path id="orbit2" d="M 32,100 a68,22 0 1,0 136,0 a68,22 0 1,0 -136,0" fill="none" transform="rotate(60 100 100)"/>
+</svg>
