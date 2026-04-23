@@ -69,8 +69,13 @@ log.info({ tools: registry.list().length }, 'agent tools registered');
 const llm = new OpenRouterClient(config.OPENROUTER_API_KEY, log, {
   baseURL: 'https://openrouter.ai/api/v1',
 });
-const loop = new QueryLoop(llm, registry, config.OPENROUTER_MODEL, log);
-log.info({ model: config.OPENROUTER_MODEL }, 'agent query loop initialised');
+const loop = new QueryLoop(llm, registry, config.OPENROUTER_MODEL, log, {
+  ...(config.OPENROUTER_MODEL_FALLBACK ? { fallbackModel: config.OPENROUTER_MODEL_FALLBACK } : {}),
+});
+log.info(
+  { model: config.OPENROUTER_MODEL, fallback: config.OPENROUTER_MODEL_FALLBACK ?? 'none' },
+  'agent query loop initialised',
+);
 
 // News service — uses Google News RSS (reliable, no CAPTCHA blocks)
 const googleNews = new GoogleNewsSearcher(log);

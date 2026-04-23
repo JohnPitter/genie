@@ -38,6 +38,10 @@ export interface ToolCall {
 
 export interface ChatRequest {
   model: string;
+  /** Optional fallback chain — if the primary `model` fails (rate limit, 5xx,
+   * unavailable), OpenRouter automatically retries with the next entry.
+   * See https://openrouter.ai/docs/features/model-routing */
+  models?: string[];
   messages: Message[];
   tools?: Tool[];
   tool_choice?: unknown;

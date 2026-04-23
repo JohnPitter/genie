@@ -6,6 +6,9 @@ const schema = z.object({
   DB_PATH: z.string().default('genie.db'),
   OPENROUTER_API_KEY: z.string().min(1, 'OPENROUTER_API_KEY is required'),
   OPENROUTER_MODEL: z.string().default('anthropic/claude-3.5-haiku'),
+  /** Optional fallback model — used automatically by OpenRouter if the primary
+   * model fails (rate limit, 5xx, unavailable). Leave empty to disable. */
+  OPENROUTER_MODEL_FALLBACK: z.string().optional(),
   WEB_SEARCH_API_KEY: z.string().optional(),
   ADMIN_TOKEN: z.string().optional(),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),

@@ -28,15 +28,17 @@ interface ToolCallBuilder {
 
 export class QueryLoop {
   private readonly maxSteps: number;
+  private readonly fallbackModel: string | undefined;
 
   constructor(
     private readonly llm: OpenRouterClient,
     private readonly registry: Registry,
     private readonly model: string,
     private readonly log: Logger,
-    opts: { maxSteps?: number } = {},
+    opts: { maxSteps?: number; fallbackModel?: string } = {},
   ) {
     this.maxSteps = opts.maxSteps ?? DEFAULT_MAX_STEPS;
+    this.fallbackModel = opts.fallbackModel;
   }
 
   async run(
@@ -45,6 +47,8 @@ export class QueryLoop {
     signal?: AbortSignal,
   ): Promise<Message[]> {
     const tools = this.registry.schemas();
+
+    const modelsChain = this.fallbackModel ? [this.model, this.fallbackModel] : undefined;
 
     for (let step = 0; step < this.maxSteps; step++) {
       if (signal?.aborted) return messages;
@@ -67,8 +71,17 @@ export class QueryLoop {
         ...(m.name ? { name: m.name } : {}),
       }));
 
+      const llmStart = Date.now();
+      let firstTokenAt = 0;
+
       const stream = this.llm.streamChat(
-        { model: this.model, messages: orMessages, tools, stream: true },
+        {
+          model: this.model,
+          ...(modelsChain ? { models: modelsChain } : {}),
+          messages: orMessages,
+          tools,
+          stream: true,
+        },
         signal,
       );
 
@@ -77,6 +90,10 @@ export class QueryLoop {
       let usage: Usage | undefined;
 
       for await (const chunk of stream) {
+        if (firstTokenAt === 0 && (chunk.delta || chunk.toolCallDelta)) {
+          firstTokenAt = Date.now();
+        }
+
         if (chunk.delta) {
           content += chunk.delta;
           await emit({ type: 'token', delta: chunk.delta });
@@ -98,6 +115,9 @@ export class QueryLoop {
         if (chunk.usage) usage = chunk.usage;
       }
 
+      const llmMs = Date.now() - llmStart;
+      const ttftMs = firstTokenAt > 0 ? firstTokenAt - llmStart : llmMs;
+
       const toolCalls: ToolCallRequest[] = [];
       for (let i = 0; i < builders.size; i++) {
         const b = builders.get(i);
@@ -109,6 +129,10 @@ export class QueryLoop {
       messages = [...messages, { role: 'assistant', content, ...(toolCalls.length ? { toolCalls } : {}) }];
 
       if (toolCalls.length === 0) {
+        this.log.info(
+          { step, ttftMs, llmMs, toolsMs: 0, totalMs: llmMs },
+          'agent: step timing (final)',
+        );
         const tu: TokenUsage | undefined = usage
           ? {
               promptTokens: usage.prompt_tokens,
@@ -121,7 +145,15 @@ export class QueryLoop {
         return messages;
       }
 
+      const toolsStart = Date.now();
       const toolMessages = await this.executeTools(toolCalls, emit, signal);
+      const toolsMs = Date.now() - toolsStart;
+
+      this.log.info(
+        { step, ttftMs, llmMs, toolsMs, totalMs: llmMs + toolsMs, toolCalls: toolCalls.length, tools: toolCalls.map(t => t.function.name) },
+        'agent: step timing',
+      );
+
       messages = [...messages, ...toolMessages];
     }
 
