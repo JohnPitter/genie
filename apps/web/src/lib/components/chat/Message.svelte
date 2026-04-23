@@ -156,8 +156,11 @@
     }
   }
 
+  /* No lado do usuário a bolha encolhe ao conteúdo (não cresce até 80%)
+     — assim o avatar fica próximo da mensagem em vez de flutuar longe. */
   .message--user .message__body {
     align-items: flex-end;
+    flex: 0 1 auto;
   }
 
   /* ── Bubble ──────────────────────────────────────── */
