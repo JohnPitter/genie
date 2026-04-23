@@ -90,6 +90,13 @@ export class BrapiSource implements Source {
       if (sd.returnOnEquity !== undefined) f.roe = sd.returnOnEquity * 100;
     }
 
+    // If no fundamental fields were populated, brapi requires a token — fall through to next source
+    const hasData = f.pe !== undefined || f.pb !== undefined || f.dividendYield !== undefined ||
+      f.roe !== undefined || f.debtToEquity !== undefined || f.netMargin !== undefined;
+    if (!hasData) {
+      throw new B3Error('SOURCE_UNAVAILABLE', 'brapi: fundamentals require a token (no data returned)');
+    }
+
     this.log.info({ ticker, durationMs: Date.now() - t0 }, 'fundamentals fetched');
     return f;
   }

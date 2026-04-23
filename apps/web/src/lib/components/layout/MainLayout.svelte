@@ -24,12 +24,21 @@
     min-height: 100dvh;
     background: var(--gradient-bg);
     background-attachment: fixed;
+    align-items: start;
+  }
+
+  /* Sticky sidebar so backdrop-filter renders against scrolling content */
+  .layout > :global(aside.sidebar) {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
   }
 
   .layout__main {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 100dvh;
     overflow: hidden;
   }
 

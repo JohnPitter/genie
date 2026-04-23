@@ -48,7 +48,10 @@
   <!-- Footer -->
   {#if !collapsed}
     <footer class="sidebar__footer">
-      <span class="version-label">v0.1.0</span>
+      <div class="sidebar__status">
+        <span class="sidebar__status-dot" aria-hidden="true"></span>
+        <span class="version-label">v2.0.0 · online</span>
+      </div>
     </footer>
   {/if}
 </aside>
@@ -57,7 +60,9 @@
   .sidebar {
     width: 240px;
     min-height: 100vh;
-    background: var(--bg-surface);
+    background: rgba(22, 23, 28, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-right: 1px solid var(--border-soft);
     display: flex;
     flex-direction: column;
@@ -76,15 +81,15 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: 0 var(--space-lg) var(--space-xl);
+    padding: 0 var(--space-lg) var(--space-lg);
     border-bottom: 1px solid var(--border-soft);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
   }
 
   .logo-orb {
     position: relative;
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
     display: grid;
     place-items: center;
@@ -144,7 +149,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    padding: var(--space-md) var(--space-md);
+    padding: 10px var(--space-md);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
     text-decoration: none;
@@ -154,15 +159,17 @@
     transition:
       background var(--dur-fast) var(--ease-standard),
       color var(--dur-fast) var(--ease-standard),
-      border-color var(--dur-fast) var(--ease-standard);
-    border-left: 3px solid transparent;
+      border-color var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard);
+    border-left: 2px solid transparent;
     position: relative;
     overflow: hidden;
   }
 
   .nav-item:hover {
-    background: var(--glass-white);
+    background: rgba(255, 255, 255, 0.07);
     color: var(--text-primary);
+    border-left-color: rgba(255, 255, 255, 0.2);
   }
 
   .nav-item:focus-visible {
@@ -171,9 +178,10 @@
   }
 
   .nav-item--active {
-    background: var(--glass-lilac);
-    color: var(--text-primary);
-    border-left-color: var(--accent-gold);
+    background: linear-gradient(90deg, rgba(167, 155, 255, 0.28) 0%, rgba(167, 155, 255, 0.06) 100%);
+    color: var(--accent-lilac);
+    border-left-color: var(--accent-lilac);
+    box-shadow: inset 0 0 0 1px rgba(167, 155, 255, 0.15);
   }
 
   .nav-item__icon {
@@ -194,10 +202,35 @@
     margin-top: auto;
   }
 
+  .sidebar__status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .sidebar__status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status-success);
+    box-shadow: var(--glow-green);
+    flex-shrink: 0;
+    animation: status-breathe 2.8s ease-in-out infinite alternate;
+  }
+
   .version-label {
     font-family: var(--font-technical);
     font-size: var(--text-micro);
     color: var(--text-muted);
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
+  }
+
+  @keyframes status-breathe {
+    from { opacity: 0.7; box-shadow: 0 0 4px rgba(126, 214, 167, 0.3); }
+    to   { opacity: 1;   box-shadow: 0 0 10px rgba(126, 214, 167, 0.6); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar__status-dot { animation: none; }
   }
 </style>

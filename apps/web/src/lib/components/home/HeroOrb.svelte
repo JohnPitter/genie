@@ -66,11 +66,12 @@
 
   .hero-orb__subtitle {
     font-family: var(--font-body);
-    font-size: var(--text-caption);
-    color: var(--text-secondary);
+    font-size: 15px;
+    color: var(--text-primary);
+    opacity: 0.65;
     margin: 0;
     line-height: 1.6;
-    max-width: 420px;
+    max-width: 440px;
   }
 
   @media (prefers-reduced-motion: reduce) {

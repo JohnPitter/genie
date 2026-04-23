@@ -60,9 +60,11 @@
     <div class="news-grid__grid news-grid__grid--loading">
       {#each { length: 6 } as _}
         <div class="news-grid__skeleton-card">
-          <Skeleton height="16px" rounded="sm" />
-          <Skeleton height="12px" width="60%" rounded="sm" />
-          <Skeleton height="48px" rounded="sm" />
+          <Skeleton height="15px" rounded="sm" />
+          <Skeleton height="15px" width="85%" rounded="sm" />
+          <Skeleton height="15px" width="55%" rounded="sm" />
+          <Skeleton height="12px" width="40%" rounded="sm" />
+          <Skeleton height="52px" rounded="sm" />
           <div class="news-grid__skeleton-badges">
             <Skeleton height="20px" width="56px" rounded="full" />
             <Skeleton height="20px" width="48px" rounded="full" />
@@ -92,7 +94,7 @@
   {:else}
     <div class="news-grid__grid">
       {#each articles as article (article.id ?? article.url)}
-        <ArticleCard {article} />
+        <ArticleCard {article} {category} />
       {/each}
     </div>
   {/if}
@@ -122,12 +124,12 @@
     }
   }
 
-  /* ── Skeleton cards ────────────────────────── */
+  /* ── Skeleton cards ──────────────────────────*/
   .news-grid__skeleton-card {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    padding: var(--space-lg);
+    padding: 20px;
     background: var(--bg-surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);

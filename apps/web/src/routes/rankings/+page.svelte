@@ -7,6 +7,17 @@
   import { ALL_CATEGORIES } from '@genie/shared';
   import type { Category, Article, Quote } from '@genie/shared';
 
+  // Fallback: top 5 tickers per category when DB has no articles yet
+  const FALLBACK_TICKERS: Record<Category, string[]> = {
+    financeiro:  ['ITUB4', 'BBDC4', 'BBAS3', 'SANB11', 'BPAC11'],
+    commodities: ['VALE3', 'PETR4', 'SUZB3', 'PRIO3', 'GGBR4'],
+    varejo:      ['MGLU3', 'LREN3', 'ASAI3', 'PCAR3', 'CRFB3'],
+    energia:     ['ELET3', 'ENGI11', 'EGIE3', 'CPFE3', 'CMIG4'],
+    saneamento:  ['SBSP3', 'CSMG3', 'SAPR11', 'SAPR4', 'SAPR3'],
+    tecnologia:  ['TOTS3', 'TIMS3', 'VIVT3', 'POSI3', 'CASH3'],
+    saude:       ['RDOR3', 'HAPV3', 'FLRY3', 'DASA3', 'BLAU3'],
+  };
+
   type LoadState = 'idle' | 'loading' | 'success' | 'error';
 
   interface RankedAsset {
@@ -45,17 +56,41 @@
 
     try {
       const articles: Article[] = await apiClient.getNewsByCategory(cat, 200);
-      const topTickers = aggregateTickers(articles);
+      let topTickers = aggregateTickers(articles);
+
+      // When DB has no articles for this category, use curated fallback tickers
+      if (topTickers.length === 0) {
+        topTickers = (FALLBACK_TICKERS[cat] ?? []).map(ticker => ({ ticker, mentions: 0 }));
+      }
 
       const quotes = await Promise.allSettled(
         topTickers.map((t) => apiClient.getQuote(t.ticker))
       );
 
-      rankings = topTickers.map((t, i) => ({
+      const allRankings = topTickers.map((t, i) => ({
         ticker: t.ticker,
         mentions: t.mentions,
         quote: quotes[i].status === 'fulfilled' ? quotes[i].value : null,
       }));
+
+      // Prioritize tickers with quotes; pad with fallbacks if needed
+      const withQuote = allRankings.filter(r => r.quote !== null);
+      if (withQuote.length >= 5) {
+        rankings = withQuote.slice(0, 5);
+      } else {
+        // Not enough tickers with quotes — pad from fallback list
+        const existing = new Set(allRankings.map(r => r.ticker));
+        const fallbacks = (FALLBACK_TICKERS[cat] ?? [])
+          .filter(t => !existing.has(t))
+          .slice(0, 5 - withQuote.length);
+        const fallbackQuotes = await Promise.allSettled(fallbacks.map(t => apiClient.getQuote(t)));
+        const fallbackRankings = fallbacks.map((t, i) => ({
+          ticker: t,
+          mentions: 0,
+          quote: fallbackQuotes[i].status === 'fulfilled' ? fallbackQuotes[i].value : null,
+        })).filter(r => r.quote !== null);
+        rankings = [...withQuote, ...fallbackRankings].slice(0, 5);
+      }
 
       cache.set(cat, rankings);
       state = 'success';
@@ -106,7 +141,7 @@
     return Array.from(map.entries())
       .map(([ticker, mentions]) => ({ ticker, mentions }))
       .sort((a, b) => b.mentions - a.mentions)
-      .slice(0, 20);
+      .slice(0, 5);
   }
 
   function onSearchInput() {
@@ -287,7 +322,7 @@
   <div class="rankings">
     {#if state === 'loading' || state === 'idle'}
       <div class="rankings__list">
-        {#each { length: 10 } as _, i}
+        {#each { length: 5 } as _, i}
           <div class="rank-card rank-card--skeleton">
             <span class="rank-card__pos">{i + 1}</span>
             <div class="rank-card__body">
@@ -344,22 +379,26 @@
             </div>
 
             <div class="rank-card__right">
-              <div class="rank-card__price">{formatPrice(rank.quote)}</div>
-              {#if change !== null}
-                <div
-                  class="rank-card__change"
-                  class:rank-card__change--up={positive}
-                  class:rank-card__change--down={negative}
-                >
-                  {#if positive}
-                    <TrendingUp size={12} aria-hidden="true" />
-                  {:else if negative}
-                    <TrendingDown size={12} aria-hidden="true" />
-                  {:else}
-                    <Minus size={12} aria-hidden="true" />
-                  {/if}
-                  {formatChange(rank.quote)}
-                </div>
+              {#if rank.quote}
+                <div class="rank-card__price">{formatPrice(rank.quote)}</div>
+                {#if change !== null}
+                  <div
+                    class="rank-card__change"
+                    class:rank-card__change--up={positive}
+                    class:rank-card__change--down={negative}
+                  >
+                    {#if positive}
+                      <TrendingUp size={12} aria-hidden="true" />
+                    {:else if negative}
+                      <TrendingDown size={12} aria-hidden="true" />
+                    {:else}
+                      <Minus size={12} aria-hidden="true" />
+                    {/if}
+                    {formatChange(rank.quote)}
+                  </div>
+                {/if}
+              {:else}
+                <span class="rank-card__no-data">sem cotação</span>
               {/if}
             </div>
 
@@ -613,6 +652,15 @@
     font-size: var(--text-caption);
     font-weight: 700;
     color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .rank-card__no-data {
+    font-family: var(--font-technical);
+    font-size: var(--text-micro);
+    color: var(--text-muted);
+    opacity: 0.6;
+    font-style: italic;
     white-space: nowrap;
   }
 

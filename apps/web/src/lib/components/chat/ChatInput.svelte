@@ -51,6 +51,7 @@
 
 <form
   class="chat-input"
+  class:chat-input--loading={loading}
   on:submit|preventDefault={submit}
   aria-label="Formulário de chat"
 >
@@ -102,6 +103,15 @@
   .chat-input:focus-within {
     border-color: var(--border-interactive);
     box-shadow: 0 0 0 3px rgba(167, 155, 255, 0.12);
+  }
+
+  .chat-input--loading {
+    animation: glow-pulse 1.8s ease-in-out infinite;
+    border-color: var(--border-interactive);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chat-input--loading { animation: none; }
   }
 
   .chat-input__textarea {

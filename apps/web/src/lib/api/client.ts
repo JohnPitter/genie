@@ -89,7 +89,7 @@ export class ApiClient {
   }
 
   addFavorite(ticker: string): Promise<{ ticker: string; status: string }> {
-    return this.request<{ ticker: string; status: string }>('POST', '/api/favorites/', { ticker });
+    return this.request<{ ticker: string; status: string }>('POST', '/api/favorites', { ticker });
   }
 
   removeFavorite(ticker: string): Promise<void> {

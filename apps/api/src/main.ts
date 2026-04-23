@@ -5,6 +5,8 @@ import { openAndMigrate } from './store/db.ts';
 import { BrapiSource } from './b3/brapi.ts';
 import { YFinanceSource } from './b3/yfinance.ts';
 import { StatusInvestScraper } from './b3/statusinvest.ts';
+import { GoogleFinanceSource } from './b3/googlefinance.ts';
+import { FundamentusSource } from './b3/fundamentus.ts';
 import { Cascade } from './b3/cascade.ts';
 import { TTLCache } from './b3/cache.ts';
 import { WebSearch } from './tools/web_search.ts';
@@ -33,7 +35,13 @@ log.info({ db: config.DB_PATH }, 'database ready');
 // B3 cascade
 const b3Cache = new TTLCache();
 const cascade = new Cascade(
-  [new BrapiSource('', log), new YFinanceSource(log), new StatusInvestScraper(log)],
+  [
+    new BrapiSource('', log),        // 1. brapi.dev API (melhor qualidade)
+    new YFinanceSource(log),          // 2. Yahoo Finance (boa cobertura)
+    new StatusInvestScraper(log),     // 3. StatusInvest scraper (B3 nativa)
+    new GoogleFinanceSource(log),     // 4. Google Finance scraper (ampla cobertura)
+    new FundamentusSource(log),       // 5. Fundamentus (cobre small/mid caps que outros perdem)
+  ],
   log,
 );
 void b3Cache; // cache is internal to Cascade

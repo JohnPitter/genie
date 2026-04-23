@@ -4,14 +4,26 @@
   import ChatInput from '$lib/components/chat/ChatInput.svelte';
   import OrbMini from '$lib/components/OrbMini.svelte';
 
+  import type { Article } from '@genie/shared';
+  import { favoritesStore } from '$lib/stores/favorites';
+
   export let ticker: string;
   export let price: number;
   export let name: string;
+  export let news: Article[] = [];
+
+  $: isFavorited = $favoritesStore.tickers.has(ticker.toUpperCase());
 
   $: contextData = {
     ticker,
     price: String(price),
     name,
+    ...(isFavorited ? { favoritado: 'sim' } : {}),
+    ...(news.length > 0 ? {
+      noticias_recentes: news.slice(0, 5)
+        .map(a => `- ${a.title}${a.summary ? ': ' + a.summary.slice(0, 100) : ''}`)
+        .join('\n'),
+    } : {}),
   };
 
   $: messages = $chatStore.messages;

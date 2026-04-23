@@ -8,13 +8,13 @@
   const dispatch = createEventDispatcher<{ change: Category }>();
 
   const LABELS: Record<Category, string> = {
-    financeiro: 'Financeiro',
-    commodities: 'Commodities',
-    varejo: 'Varejo',
-    energia: 'Energia',
-    saneamento: 'Saneamento',
-    tecnologia: 'Tecnologia',
-    saude: 'Saúde',
+    financeiro:  '📈 Financeiro',
+    commodities: '⚗️ Commodities',
+    varejo:      '🛍️ Varejo',
+    energia:     '⚡ Energia',
+    saneamento:  '💧 Saneamento',
+    tecnologia:  '💻 Tecnologia',
+    saude:       '🏥 Saúde',
   };
 
   function select(cat: Category) {

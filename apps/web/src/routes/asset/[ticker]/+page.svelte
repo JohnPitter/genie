@@ -79,7 +79,7 @@
     {:else if activeTab === 'news'}
       <AssetNews articles={news} />
     {:else if activeTab === 'chat'}
-      <AssetChat {ticker} price={quote.price} name={quote.name} />
+      <AssetChat {ticker} price={quote.price} name={quote.name} {news} />
     {/if}
   </div>
 </main>

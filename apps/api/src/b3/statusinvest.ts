@@ -67,19 +67,30 @@ export class StatusInvestScraper implements Source {
       updatedAt: new Date().toISOString(),
     };
 
-    $('.indicator-today-container .info').each((_i, el) => {
-      const title = $(el).find('.title').text().trim();
-      const rawVal = $(el).find('.value').text().trim();
+    // Current layout: h3.title (label) + strong.value (number) inside .indicator-today-container
+    $('.indicator-today-container').find('h3.title, h3.title.uppercase').each((_i, el) => {
+      const title = $(el).text().trim();
+      // The value is in the next strong.value sibling within the parent wrapper
+      const rawVal = $(el).closest('div').find('strong.value').first().text().trim()
+        || $(el).parent().next().find('strong.value').first().text().trim();
       const val = parseBrazilianFloat(rawVal);
       if (val === null) return;
 
       switch (title) {
         case 'P/L': f.pe = val; break;
         case 'P/VP': f.pb = val; break;
-        case 'DY': f.dividendYield = val; break;
+        // DY label changed to 'D.Y' in 2025 redesign; also accept old label
+        case 'D.Y':
+        case 'DY':
+        case 'Dividend Yield': f.dividendYield = val; break;
         case 'ROE': f.roe = val; break;
-        case 'Dív. Bruta/Patrim.': f.debtToEquity = val; break;
-        case 'Margem Líquida': f.netMargin = val; break;
+        // Debt/equity label changed; also accept HTML-entity decoded variants
+        case 'Dív. Bruta/Patrim.':
+        case 'Dív. líquida/PL':
+        case 'Dív. bruta/PL': f.debtToEquity = val; break;
+        // Net margin label changed to 'M. Líquida'
+        case 'Margem Líquida':
+        case 'M. Líquida': f.netMargin = val; break;
       }
     });
 

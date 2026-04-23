@@ -7,8 +7,12 @@
   import ChatInput from '$lib/components/chat/ChatInput.svelte';
   import OrbMini from '$lib/components/OrbMini.svelte';
   import { chatStore, chatActions } from '$lib/stores/chat';
+  import { favoritesStore, favoritesActions } from '$lib/stores/favorites';
   import { ALL_CATEGORIES } from '@genie/shared';
   import type { Article, Category } from '@genie/shared';
+  import { onMount } from 'svelte';
+
+  onMount(() => { favoritesActions.load(false); });
 
   let activeCategory: Category = 'financeiro';
   let visibleArticles: Article[] = [];
@@ -57,10 +61,17 @@
 
   async function handleHeroSubmit(e: CustomEvent<{ message: string }>) {
     const newsCtx = buildNewsContext(visibleArticles);
-    const contextData = newsCtx
-      ? { noticias_em_destaque: `Notícias visíveis no painel (categoria: ${activeCategory}):\n${newsCtx}` }
-      : undefined;
-    await chatActions.send(e.detail.message, contextData);
+    const favTickers = [...$favoritesStore.tickers];
+
+    const contextData: Record<string, string> = {};
+    if (newsCtx) {
+      contextData.noticias_em_destaque = `Notícias visíveis no painel (categoria: ${activeCategory}):\n${newsCtx}`;
+    }
+    if (favTickers.length > 0) {
+      contextData.ativos_favoritos = `O usuário monitora os seguintes ativos: ${favTickers.join(', ')}`;
+    }
+
+    await chatActions.send(e.detail.message, Object.keys(contextData).length ? contextData : undefined);
   }
 </script>
 
@@ -79,7 +90,7 @@
 
       <div class="home__hero-input">
         <ChatInput
-          placeholder="Ex: Como está a Petrobras hoje?"
+          placeholder="Ex: PETR4, dividendos, fundamentos, rankings..."
           loading={streaming}
           on:submit={handleHeroSubmit}
         />
@@ -129,7 +140,9 @@
       in:fade={{ duration: 280, delay: 80 }}
       out:fade={{ duration: 180 }}
     >
-      <h2 class="home__news-title">Notícias por categoria</h2>
+      <div class="home__news-header">
+        <h2 class="home__news-title">Notícias por categoria</h2>
+      </div>
 
       <CategoryTabs
         categories={ALL_CATEGORIES}
@@ -240,7 +253,25 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: var(--space-xl);
+    gap: var(--space-2xl);
+    padding-top: var(--space-lg);
+  }
+
+  .home__news-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-left: var(--space-xs);
+  }
+
+  .home__news-header::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 26px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent-lilac) 0%, var(--accent-violet) 100%);
+    flex-shrink: 0;
   }
 
   .home__news-title {
