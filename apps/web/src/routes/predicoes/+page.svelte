@@ -272,6 +272,10 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
   }
 
   @media (max-width: 768px) {

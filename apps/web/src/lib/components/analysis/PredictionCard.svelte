@@ -116,10 +116,20 @@
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-lg);
     text-decoration: none;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
     transition:
       border-color var(--dur-fast) var(--ease-standard),
       transform var(--dur-fast) var(--ease-standard),
       box-shadow var(--dur-fast) var(--ease-standard);
+  }
+
+  @media (max-width: 600px) {
+    .card {
+      padding: var(--space-md);
+    }
   }
 
   .card:hover {
@@ -152,6 +162,7 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    overflow: hidden;
   }
 
   .card__ticker {
