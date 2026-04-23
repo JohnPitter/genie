@@ -1,4 +1,7 @@
-import type { Article, Quote, Fundamentals, Favorite, FavoriteEnriched, StockAnalysis } from '@genie/shared';
+import type {
+  Article, Quote, Fundamentals, Favorite, FavoriteEnriched,
+  StockAnalysis, PredictionsResponse, PredictionItem,
+} from '@genie/shared';
 
 // ── ApiError ─────────────────────────────────────────────────────────────────
 
@@ -102,6 +105,22 @@ export class ApiClient {
    */
   getStockAnalysis(ticker: string): Promise<StockAnalysis> {
     return this.request<StockAnalysis>('GET', `/api/b3/analysis/${encodeURIComponent(ticker)}`);
+  }
+
+  /**
+   * Fetches the latest predictions ranking (top buy / top sell / all).
+   * Computed by the cron screener (10:15 e 13:15 BRT em dias úteis).
+   */
+  getPredictions(): Promise<PredictionsResponse> {
+    return this.request<PredictionsResponse>('GET', '/api/b3/predictions');
+  }
+
+  /**
+   * Fetches a single-ticker prediction. If no fresh cache, triggers an
+   * on-demand analysis (blocks up to ~10s while historical data is fetched).
+   */
+  getPrediction(ticker: string): Promise<PredictionItem> {
+    return this.request<PredictionItem>('GET', `/api/b3/predictions/${encodeURIComponent(ticker)}`);
   }
 
   /** Validates the admin token. Returns true if the token grants access, false otherwise. */

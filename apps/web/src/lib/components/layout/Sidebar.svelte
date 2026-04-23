@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { House, Star, TrendingUp } from 'lucide-svelte';
+  import { House, Star, TrendingUp, Sparkles } from 'lucide-svelte';
   import { page } from '$app/stores';
 
   export let collapsed = false;
 
   const navItems: { href: string; label: string; icon: typeof House }[] = [
     { href: '/', label: 'Início', icon: House },
+    { href: '/predicoes', label: 'Predições IA', icon: Sparkles },
     { href: '/favorites', label: 'Favoritos', icon: Star },
     { href: '/rankings', label: 'Rankings', icon: TrendingUp },
   ];

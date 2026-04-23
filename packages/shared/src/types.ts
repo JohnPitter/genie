@@ -161,6 +161,41 @@ export interface StockAnalysis {
   generatedAt: string;  // ISO 8601
 }
 
+// ── Prediction / Screener ────────────────────────────────────────────────────
+
+export type Signal = 'compra_forte' | 'compra' | 'neutro' | 'venda' | 'venda_forte';
+
+export interface IndicatorVote {
+  name: string;
+  vote: -1 | 0 | 1;
+  rationale: string;
+}
+
+export interface PredictionItem {
+  id: number;
+  ticker: string;
+  name: string;
+  price: number;
+  changePct: number;
+  signal: Signal;
+  score: number;              // -6 a +6
+  confidence: 'baixa' | 'media' | 'alta';
+  votes: IndicatorVote[];
+  backtestAccuracy: number | null;
+  backtestTotal: number | null;
+  rationale: string | null;
+  computedAt: string;
+}
+
+export interface PredictionsResponse {
+  topBuy: PredictionItem[];
+  topSell: PredictionItem[];
+  all: PredictionItem[];
+  lastRunAt: string | null;
+  totalAnalysed: number;
+  message?: string;
+}
+
 // ── SSE streaming events ─────────────────────────────────────────────────────
 
 export interface TokenUsage {

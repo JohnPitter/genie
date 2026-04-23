@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const MIGRATION_FILES = ['001_init.sql', '002_news_articles.sql'] as const;
+const MIGRATION_FILES = ['001_init.sql', '002_news_articles.sql', '003_predictions.sql'] as const;
 
 export type DB = Database.Database;
 

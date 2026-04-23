@@ -5,9 +5,11 @@ import type { Source } from '../b3/source.ts';
 import type { Logger } from 'pino';
 import { DailyFavoritesJob } from './daily_favorites.ts';
 import { NewsRefreshJob } from './news_refresh.ts';
+import { PredictionsRefreshJob } from './predictions_refresh.ts';
 
-const DAILY_SPEC = '0 8 * * 1-5';  // 08:00 BRT weekdays
-const REFRESH_SPEC = '0 * * * *';  // every hour
+const DAILY_SPEC = '0 8 * * 1-5';              // 08:00 BRT weekdays
+const REFRESH_SPEC = '0 * * * *';               // every hour
+const PREDICTIONS_SPEC = '15 10,13 * * 1-5';    // 10:15 e 13:15 BRT (abertura + intraday)
 
 export interface JobDeps {
   db: DB;
@@ -16,6 +18,7 @@ export interface JobDeps {
   log: Logger;
   dailySpec?: string;
   refreshSpec?: string;
+  predictionsSpec?: string;
 }
 
 export function registerJobs(sched: Scheduler, deps: JobDeps): void {
@@ -24,4 +27,7 @@ export function registerJobs(sched: Scheduler, deps: JobDeps): void {
 
   const refresh = new NewsRefreshJob(deps.db, deps.newsSvc, deps.b3, deps.log);
   sched.schedule(deps.refreshSpec ?? REFRESH_SPEC, 'news-refresh', s => refresh.run(s));
+
+  const predictions = new PredictionsRefreshJob(deps.db, deps.log);
+  sched.schedule(deps.predictionsSpec ?? PREDICTIONS_SPEC, 'predictions-refresh', s => predictions.run(s));
 }
