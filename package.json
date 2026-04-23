@@ -1,0 +1,14 @@
+{
+  "name": "genie",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter @genie/api --filter @genie/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "api:dev": "pnpm --filter @genie/api dev",
+    "api:build": "pnpm --filter @genie/api build",
+    "api:test": "pnpm --filter @genie/api test",
+    "web:dev": "pnpm --filter @genie/web dev"
+  }
+}

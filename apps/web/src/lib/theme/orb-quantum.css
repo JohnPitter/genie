@@ -1,0 +1,133 @@
+/* Orb Quantum Design System — CSS Tokens v1.0.0
+ * Extracted from ia_system_design.md
+ * Import this file once in app.html or +layout.svelte
+ */
+
+:root {
+  /* ── Backgrounds ───────────────────────────────────────────── */
+  --bg-primary: #050507;
+  --bg-deep-space: #0B0C11;
+  --bg-surface: #16171C;
+  --bg-surface-2: #23242B;
+  --bg-elevated: #1C1D24;
+
+  /* ── Text ──────────────────────────────────────────────────── */
+  --text-primary: #EDEBFF;
+  --text-secondary: #B7B9C9;
+  --text-muted: #8B8D9A;
+
+  /* ── Accent palette ────────────────────────────────────────── */
+  --accent-gold: #CFC29A;
+  --accent-gold-2: #B7A36D;
+  --accent-lilac: #A79BFF;
+  --accent-violet: #6C42FF;
+  --accent-white: #EDEBFF;
+
+  /* ── Transparent / glass ───────────────────────────────────── */
+  --glass-white: rgba(255, 255, 255, 0.08);
+  --glass-lilac: rgba(167, 155, 255, 0.18);
+  --glass-gold: rgba(207, 194, 154, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(207, 194, 154, 0.35);
+  --border-interactive: rgba(167, 155, 255, 0.4);
+
+  /* ── Status / semantic ─────────────────────────────────────── */
+  --status-success: #7ED6A7;
+  --status-warning: #E8C56A;
+  --status-error: #F07C7C;
+  --status-info: #8CB8FF;
+
+  /* ── Border radii ──────────────────────────────────────────── */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 999px;
+
+  /* ── Shadows & glows ───────────────────────────────────────── */
+  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.38);
+  --shadow-hover: 0 16px 48px rgba(0, 0, 0, 0.42);
+  --glow-violet: 0 0 24px rgba(167, 155, 255, 0.35);
+  --glow-gold: 0 0 20px rgba(207, 194, 154, 0.22);
+  --orb-glow: 0 0 60px rgba(167, 155, 255, 0.28), 0 0 120px rgba(237, 235, 255, 0.12);
+
+  /* ── Gradients ─────────────────────────────────────────────── */
+  --gradient-brand: linear-gradient(135deg, #CFC29A 0%, #A79BFF 45%, #EDEBFF 70%, #6C42FF 100%);
+  --gradient-bg: radial-gradient(circle at center, rgba(167, 155, 255, 0.16) 0%, rgba(5, 5, 7, 0) 45%),
+                 linear-gradient(180deg, #050507 0%, #0B0C11 100%);
+  --gradient-surface-glass: linear-gradient(180deg, rgba(28, 29, 36, 0.88) 0%, rgba(17, 18, 23, 0.92) 100%);
+  --gradient-border-premium: linear-gradient(135deg, rgba(207, 194, 154, 0.8), rgba(167, 155, 255, 0.7));
+  --gradient-orb-light: radial-gradient(circle, rgba(237, 235, 255, 0.95) 0%, rgba(167, 155, 255, 0.65) 35%, rgba(108, 66, 255, 0.18) 65%, rgba(5, 5, 7, 0) 100%);
+
+  /* ── Blur ──────────────────────────────────────────────────── */
+  --blur-glass: 18px;
+  --blur-strong: 28px;
+
+  /* ── Motion ────────────────────────────────────────────────── */
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: ease-in-out;
+  --dur-fast: 180ms;
+  --dur-medium: 280ms;
+  --dur-smooth: 420ms;
+  --dur-cinematic: 900ms;
+
+  /* ── Spacing scale (8px base) ──────────────────────────────── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+  --space-5xl: 64px;
+
+  /* ── Typography ────────────────────────────────────────────── */
+  --font-display: 'Sora', 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-technical: 'Space Grotesk', 'Inter', sans-serif;
+
+  --text-display-xl: 56px;
+  --text-h1: 40px;
+  --text-h2: 32px;
+  --text-h3: 24px;
+  --text-title: 18px;
+  --text-body: 16px;
+  --text-caption: 14px;
+  --text-micro: 12px;
+}
+
+/* ── Base reset ──────────────────────────────────────────────── */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gradient-bg);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Orb animations ──────────────────────────────────────────── */
+@keyframes orb-breathe {
+  from { transform: scale(1);    opacity: 0.85; }
+  to   { transform: scale(1.06); opacity: 1;    }
+}
+
+@keyframes orb-pulse {
+  from { transform: scale(0.96); }
+  to   { transform: scale(1.04); }
+}
+
+@keyframes orb-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
