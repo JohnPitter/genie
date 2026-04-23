@@ -6,6 +6,13 @@ import type { Message } from '../../agent/message.ts';
 
 const MAX_HISTORY = 20;
 
+/** Split text into small chunks for streaming as fake tokens. */
+function* chunkText(text: string, size: number): Generator<string> {
+  for (let i = 0; i < text.length; i += size) {
+    yield text.slice(i, i + size);
+  }
+}
+
 interface ChatStreamBody {
   conversationId?: string;
   message: string;
@@ -53,7 +60,23 @@ export async function registerChatRoutes(app: FastifyInstance, deps: AppDeps): P
     try {
       finalMessages = await deps.loop.run(messages, sendSSE);
     } catch (err) {
-      sendSSE({ type: 'error', error: err instanceof Error ? err.message : String(err) });
+      const errMsg = err instanceof Error ? err.message : String(err);
+      deps.log.error({ err, conversationId }, 'chat: agent loop failed');
+
+      // Friendly fallback: always give the user *something*, even on failure.
+      const fallback =
+        'Não consegui gerar uma resposta completa agora (possivelmente o modelo LLM está indisponível ou sobrecarregado). ' +
+        'Tente novamente em alguns segundos, ou reformule a pergunta. Se preferir, consulte a cotação diretamente na aba do ativo.';
+
+      // Stream the fallback as normal tokens so the user sees an answer
+      for (const chunk of chunkText(fallback, 20)) {
+        sendSSE({ type: 'token', delta: chunk });
+      }
+      sendSSE({ type: 'message_end' });
+      sendSSE({ type: 'error', error: errMsg });
+
+      // Record the fallback in history so the conversation stays coherent
+      finalMessages = [...messages, { role: 'assistant', content: fallback }];
     }
 
     // Persist user + last assistant message

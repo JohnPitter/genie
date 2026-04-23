@@ -33,6 +33,8 @@ export interface ChatState {
   orbState: OrbState;
   streaming: boolean;
   error: string | null;
+  /** Last user input + context — used by retry() */
+  lastSend: { message: string; contextData?: Record<string, string> } | null;
 }
 
 // ── StreamFn type ─────────────────────────────────────────────────────────────
@@ -49,6 +51,7 @@ const INITIAL_STATE: ChatState = {
   orbState: 'idle',
   streaming: false,
   error: null,
+  lastSend: null,
 };
 
 export const chatStore: Writable<ChatState> = writable<ChatState>({ ...INITIAL_STATE });
@@ -95,6 +98,8 @@ function findLastAssistantIndex(messages: ChatMessage[]): number {
 
 export interface ChatActions {
   send: (message: string, contextData?: Record<string, string>) => Promise<void>;
+  /** Retry the last message — removes the failed assistant response and resends. */
+  retry: () => Promise<void>;
   clear: () => void;
   setListening: (v: boolean) => void;
 }
@@ -120,6 +125,7 @@ export function createChatActions(
         ...s,
         messages: [...s.messages, userMsg],
         error: null,
+        lastSend: { message, ...(contextData ? { contextData } : {}) },
       }));
 
       // 2. Append placeholder assistant message.
@@ -162,6 +168,30 @@ export function createChatActions(
         // 5. Ensure streaming flag is cleared regardless of outcome.
         store.update((s) => ({ ...s, streaming: false }));
       }
+    },
+
+    async retry(): Promise<void> {
+      let last: ChatState['lastSend'] = null;
+      store.update((s) => {
+        last = s.lastSend;
+        // Remove the last user-message + last failed assistant-message pair
+        // so send() can append fresh ones without duplication.
+        const msgs = [...s.messages];
+        // Find last assistant with error status and remove it + the user msg right before it
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (msgs[i].role === 'assistant' && (msgs[i].status === 'error' || msgs[i].content === '')) {
+            msgs.splice(i, 1);
+            // remove the preceding user message (the one we'll re-send)
+            if (i - 1 >= 0 && msgs[i - 1]?.role === 'user') msgs.splice(i - 1, 1);
+            break;
+          }
+        }
+        return { ...s, messages: msgs, error: null };
+      });
+
+      const resolvedLast = last as ChatState['lastSend'];
+      if (!resolvedLast) return;
+      await this.send(resolvedLast.message, resolvedLast.contextData);
     },
 
     clear(): void {

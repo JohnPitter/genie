@@ -1,10 +1,19 @@
 <script lang="ts">
+  import { RefreshCw } from 'lucide-svelte';
   import OrbMini from '$lib/components/OrbMini.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import { renderMarkdown } from '$lib/utils/markdown';
+  import { chatActions, chatStore } from '$lib/stores/chat';
   import type { ChatMessage } from '$lib/stores/chat';
 
   export let message: ChatMessage;
+
+  $: streaming = $chatStore.streaming;
+
+  function handleRetry() {
+    if (streaming) return;
+    chatActions.retry();
+  }
 
   $: isUser = message.role === 'user';
   $: isStreaming = message.status === 'streaming';
@@ -85,10 +94,19 @@
       </div>
     {/if}
 
-    <!-- Error badge -->
+    <!-- Error badge + retry button -->
     {#if hasError}
       <div class="message__error">
         <Badge variant="error" size="sm">Erro ao gerar resposta</Badge>
+        <button
+          class="message__retry-btn"
+          on:click={handleRetry}
+          disabled={streaming}
+          aria-label="Tentar novamente"
+        >
+          <RefreshCw size={13} />
+          Tentar novamente
+        </button>
       </div>
     {/if}
   </div>
@@ -366,7 +384,41 @@
 
   /* ── Error ───────────────────────────────────────── */
   .message__error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     margin-top: var(--space-xs);
+    flex-wrap: wrap;
+  }
+
+  .message__retry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(167, 155, 255, 0.08);
+    border: 1px solid rgba(167, 155, 255, 0.3);
+    border-radius: var(--radius-full);
+    color: var(--accent-lilac);
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .message__retry-btn:hover:not(:disabled) {
+    background: rgba(167, 155, 255, 0.18);
+    border-color: var(--accent-lilac);
+    color: var(--text-primary);
+  }
+
+  .message__retry-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   /* ── Avatars ─────────────────────────────────────── */

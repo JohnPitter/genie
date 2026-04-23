@@ -13,6 +13,7 @@ const INITIAL_STATE: ChatState = {
   orbState: 'idle',
   streaming: false,
   error: null,
+  lastSend: null,
 };
 
 beforeEach(() => {
@@ -22,6 +23,7 @@ beforeEach(() => {
 function makeMockActions(): ChatActions {
   return {
     send: vi.fn().mockResolvedValue(undefined),
+    retry: vi.fn().mockResolvedValue(undefined),
     clear: vi.fn(),
     setListening: vi.fn(),
   };

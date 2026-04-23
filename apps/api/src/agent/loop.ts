@@ -125,8 +125,13 @@ export class QueryLoop {
       messages = [...messages, ...toolMessages];
     }
 
+    // Max steps reached — give the user the partial context we have so far
+    // rather than nothing. Emit the partial content as a fallback assistant msg.
+    const fallback = 'Cheguei ao limite de passos sem conseguir uma resposta final. Os dados que consegui coletar estão acima; por favor, reformule a pergunta ou tente novamente.';
+    await emit({ type: 'token', delta: fallback });
+    await emit({ type: 'message_end' });
     await emit({ type: 'error', error: 'max steps reached' });
-    return messages;
+    return [...messages, { role: 'assistant', content: fallback }];
   }
 
   private async executeTools(

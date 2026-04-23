@@ -13,6 +13,7 @@ function makeInitialStore() {
     orbState: 'idle',
     streaming: false,
     error: null,
+    lastSend: null,
   });
 }
 

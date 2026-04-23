@@ -16,6 +16,7 @@ const EMPTY_STATE = {
   orbState: 'idle' as const,
   streaming: false,
   error: null,
+  lastSend: null,
 };
 
 beforeEach(() => {
