@@ -81,19 +81,20 @@ describe('Orb', () => {
     expect(orb?.style.getPropertyValue('--size') || orb?.getAttribute('style')).toContain('360px');
   });
 
-  it('renders the orbital SVG layer', () => {
+  it('renders the SVG root', () => {
     const { container } = render(Orb, { props: { state: 'idle' } });
-    expect(container.querySelector('.orb__orbital')).not.toBeNull();
+    expect(container.querySelector('.orb__svg')).not.toBeNull();
   });
 
-  it('renders the core layer', () => {
+  it('renders the halo layer', () => {
     const { container } = render(Orb, { props: { state: 'idle' } });
-    expect(container.querySelector('.orb__core')).not.toBeNull();
+    expect(container.querySelector('.halo')).not.toBeNull();
   });
 
-  it('renders the outer glow layer', () => {
+  it('renders orbit rings and particles', () => {
     const { container } = render(Orb, { props: { state: 'idle' } });
-    expect(container.querySelector('.orb__glow-outer')).not.toBeNull();
+    expect(container.querySelector('.ring--h')).not.toBeNull();
+    expect(container.querySelector('.particle--1')).not.toBeNull();
   });
 
   it('default size is 240', () => {

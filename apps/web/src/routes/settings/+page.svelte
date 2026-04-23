@@ -26,9 +26,12 @@
   let systemLoading = false;
   let systemError = '';
 
-  // ── Job trigger ───────────────────────────────────────
+  // ── Job triggers ───────────────────────────────────────
   let jobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
   let jobMsg = '';
+
+  let predJobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
+  let predJobMsg = '';
 
   onMount(async () => {
     const stored = sessionStorage.getItem(SESSION_TOKEN_KEY);
@@ -106,6 +109,20 @@
       jobMsg = err instanceof Error ? err.message : 'Erro ao iniciar job';
     }
     setTimeout(() => { jobStatus = 'idle'; jobMsg = ''; }, 4000);
+  }
+
+  async function triggerPredictionsJob() {
+    predJobStatus = 'running';
+    predJobMsg = '';
+    try {
+      const res = await apiClient.triggerPredictionsRefresh(adminToken);
+      predJobStatus = 'done';
+      predJobMsg = `Screening iniciado em ${res.tickers} ativos (leva ~5-10 min).`;
+    } catch (err) {
+      predJobStatus = 'error';
+      predJobMsg = err instanceof Error ? err.message : 'Erro ao iniciar screener';
+    }
+    setTimeout(() => { predJobStatus = 'idle'; predJobMsg = ''; }, 8000);
   }
 </script>
 
@@ -312,6 +329,40 @@
 
       {#if jobMsg}
         <p class="job-msg" class:job-msg--error={jobStatus === 'error'}>{jobMsg}</p>
+      {/if}
+
+      <!-- Predições IA screener -->
+      <div class="job-row">
+        <div class="job-row__info">
+          <div class="job-row__icon"><Cpu size={18} /></div>
+          <div>
+            <span class="job-row__name">Gerar predições IA</span>
+            <span class="job-row__desc">Roda o screener em ~60 tickers e popula a página /predicoes. Leva 5-10 min.</span>
+          </div>
+        </div>
+
+        <button
+          class="job-btn"
+          class:job-btn--running={predJobStatus === 'running'}
+          class:job-btn--done={predJobStatus === 'done'}
+          class:job-btn--error={predJobStatus === 'error'}
+          on:click={triggerPredictionsJob}
+          disabled={predJobStatus === 'running'}
+        >
+          {#if predJobStatus === 'running'}
+            <RefreshCw size={14} class="spin" /> Executando…
+          {:else if predJobStatus === 'done'}
+            <CheckCircle size={14} /> Iniciado
+          {:else if predJobStatus === 'error'}
+            <AlertCircle size={14} /> Erro
+          {:else}
+            Executar agora
+          {/if}
+        </button>
+      </div>
+
+      {#if predJobMsg}
+        <p class="job-msg" class:job-msg--error={predJobStatus === 'error'}>{predJobMsg}</p>
       {/if}
     </section>
 

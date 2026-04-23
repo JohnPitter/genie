@@ -30,7 +30,18 @@
     try {
       data = await apiClient.getPredictions();
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Falha ao carregar predições.';
+      const msg = err instanceof Error ? err.message : 'Falha ao carregar predições.';
+      // Se a rota não existe no deploy ou retornou algo inesperado, tratar como "não populado"
+      // para não parecer erro ao usuário antes do primeiro screener rodar.
+      if (msg.includes('servidor respondeu algo inesperado') || msg.includes('Backend indisponível') || msg.includes('404')) {
+        data = {
+          topBuy: [], topSell: [], all: [],
+          lastRunAt: null, totalAnalysed: 0,
+          message: 'Screener ainda não foi executado. Acesse /settings como admin e clique em "Gerar predições IA" para popular o banco.',
+        };
+      } else {
+        error = msg;
+      }
     } finally {
       loading = false;
     }

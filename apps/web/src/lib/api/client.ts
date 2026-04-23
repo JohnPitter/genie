@@ -149,6 +149,16 @@ export class ApiClient {
     );
   }
 
+  /** Dispara o screener de predições em todos os tickers do catálogo (10-15 min). */
+  triggerPredictionsRefresh(adminToken: string): Promise<{ status: string; tickers: number }> {
+    return this.requestWithHeaders<{ status: string; tickers: number }>(
+      'POST',
+      '/api/b3/predictions/run',
+      undefined,
+      { 'X-Admin-Token': adminToken },
+    );
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private requestWithHeaders<T>(
