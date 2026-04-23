@@ -14,13 +14,13 @@
 
   $: isFavorited = $favoritesStore.tickers.has(ticker.toUpperCase());
 
+  // Use as chaves do whitelist em apps/api/src/agent/prompt.ts
+  // (ALLOWED_CONTEXT_KEYS) — fora delas, o backend descarta silenciosamente.
   $: contextData = {
-    ticker,
-    price: String(price),
-    name,
-    ...(isFavorited ? { favoritado: 'sim' } : {}),
+    ticker_atual: `${ticker}${name ? ` (${name})` : ''}${isFavorited ? ' — favorito do usuário' : ''}`,
+    cotacao_atual: `R$ ${price.toFixed(2)}`,
     ...(news.length > 0 ? {
-      noticias_recentes: news.slice(0, 5)
+      noticias_do_ativo: news.slice(0, 5)
         .map(a => `- ${a.title}${a.summary ? ': ' + a.summary.slice(0, 100) : ''}`)
         .join('\n'),
     } : {}),
