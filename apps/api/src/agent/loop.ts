@@ -28,17 +28,22 @@ interface ToolCallBuilder {
 
 export class QueryLoop {
   private readonly maxSteps: number;
-  private readonly fallbackModel: string | undefined;
+  private readonly fallbackModels: string[];
 
   constructor(
     private readonly llm: OpenRouterClient,
     private readonly registry: Registry,
     private readonly model: string,
     private readonly log: Logger,
-    opts: { maxSteps?: number; fallbackModel?: string } = {},
+    opts: { maxSteps?: number; fallbackModels?: string[] | string } = {},
   ) {
     this.maxSteps = opts.maxSteps ?? DEFAULT_MAX_STEPS;
-    this.fallbackModel = opts.fallbackModel;
+    const raw = opts.fallbackModels;
+    this.fallbackModels = Array.isArray(raw)
+      ? raw.filter(m => m.trim().length > 0)
+      : typeof raw === 'string'
+        ? raw.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
   }
 
   async run(
@@ -48,7 +53,9 @@ export class QueryLoop {
   ): Promise<Message[]> {
     const tools = this.registry.schemas();
 
-    const modelsChain = this.fallbackModel ? [this.model, this.fallbackModel] : undefined;
+    const modelsChain = this.fallbackModels.length > 0
+      ? [this.model, ...this.fallbackModels]
+      : undefined;
 
     for (let step = 0; step < this.maxSteps; step++) {
       if (signal?.aborted) return messages;

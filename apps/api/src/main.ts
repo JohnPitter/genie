@@ -70,10 +70,10 @@ const llm = new OpenRouterClient(config.OPENROUTER_API_KEY, log, {
   baseURL: 'https://openrouter.ai/api/v1',
 });
 const loop = new QueryLoop(llm, registry, config.OPENROUTER_MODEL, log, {
-  ...(config.OPENROUTER_MODEL_FALLBACK ? { fallbackModel: config.OPENROUTER_MODEL_FALLBACK } : {}),
+  ...(config.OPENROUTER_MODEL_FALLBACK ? { fallbackModels: config.OPENROUTER_MODEL_FALLBACK } : {}),
 });
 log.info(
-  { model: config.OPENROUTER_MODEL, fallback: config.OPENROUTER_MODEL_FALLBACK ?? 'none' },
+  { model: config.OPENROUTER_MODEL, fallbacks: config.OPENROUTER_MODEL_FALLBACK ?? 'none' },
   'agent query loop initialised',
 );
 
