@@ -11,7 +11,7 @@
 [![SvelteKit](https://img.shields.io/badge/SvelteKit-2-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://kit.svelte.dev)
 [![Fastify](https://img.shields.io/badge/Fastify-5-000000?style=flat-square&logo=fastify&logoColor=white)](https://fastify.dev)
 [![SQLite](https://img.shields.io/badge/SQLite-better--sqlite3-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![Tests](https://img.shields.io/badge/Tests-644%20passing-2D8E5E?style=flat-square)](https://vitest.dev)
+[![Tests](https://img.shields.io/badge/Tests-670%20passing-2D8E5E?style=flat-square)](https://vitest.dev)
 [![License](https://img.shields.io/badge/License-MIT-orange?style=flat-square)](#license)
 
 [Features](#features) · [Como Funciona](#como-funciona) · [Tech Stack](#tech-stack) · [Desenvolvimento](#desenvolvimento) · [Variáveis de Ambiente](#variáveis-de-ambiente)
@@ -36,18 +36,23 @@ Genie é um assistente financeiro especializado na B3 (bolsa de valores brasilei
 | **Retry automático** | Botão de retry em respostas com erro; o agente sempre retorna algo mesmo sem dados completos |
 | **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático |
 | **Fundamentos** | P/L, P/VP, Dividend Yield, ROE, Dív/Patrim., Margem Líquida |
+| **Predições de IA** | Score quantitativo -6 a +6 baseado em RSI, MACD, Bollinger, Médias Móveis, Volume e contexto IBOV — página `/predicoes` com top compras/vendas |
+| **Backtest walk-forward** | Acurácia histórica de 60 dias por ticker — cada sinal mostra quantos % acertou D+5 no passado |
 | **Busca de tickers** | Busca por prefixo em +150 ativos catalogados em 7 setores |
-| **Notícias filtradas** | Google News RSS por ticker/categoria com cache SQLite e filtro anti-ruído |
-| **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação em tempo real |
+| **Notícias filtradas** | Google News RSS por ticker/categoria com cache SQLite, filtro anti-ruído e queries enriquecidas com nome da empresa |
+| **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação e link direto para análise |
+| **Glossário financeiro** | 10 termos explicados para iniciantes (RSI, MACD, Bollinger, Score, Backtest…) na página de predições |
 | **Favoritos** | Adicione/remova ativos — o agente usa sua carteira como contexto nas respostas |
 | **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo da B3 fica sem cotação |
 | **Fallback de modelo** | Múltiplos modelos LLM em cascata via `OPENROUTER_MODEL_FALLBACK` — se o primário falhar, o próximo entra |
-| **Timing por step** | Logs de TTFT, duração LLM e tools por step de raciocínio — identify gargalos facilmente |
+| **Defesa contra prompt injection** | Whitelist de chaves de contexto, stripping de role tokens, sandwich defense e detecção heurística |
+| **Timing por step** | Logs de TTFT, duração LLM e tools por step de raciocínio — identifique gargalos facilmente |
 | **Mobile-first** | Layout responsivo para iPhone SE/12/14 Pro Max — sidebar vira drawer, chat vira overlay |
-| **Jobs agendados** | Refresh diário de notícias dos favoritos e warmup de cache de cotações |
-| **Painel Admin** | `/settings` protegido por token, com status do sistema e disparo manual de jobs |
+| **Animações e transições** | Fade entre rotas, stagger de cards, glossário animado — `prefers-reduced-motion` respeitado |
+| **Jobs agendados** | Refresh diário de predições e notícias dos favoritos + bootstrap automático no primeiro deploy |
+| **Painel Admin** | `/settings` protegido por token, com status do sistema e disparo manual de jobs (predições + notícias) |
 | **CI/CD** | GitHub Actions com type-check, testes e build em cada PR — `main` protegida |
-| **644 testes** | 207 API (unitários + integração + e2e parity) + 437 Web — todos passando |
+| **670 testes** | 233 API (unitários + integração + e2e parity) + 437 Web — todos passando |
 
 ---
 
@@ -73,8 +78,10 @@ graph TD
     FUND["5. Fundamentus"]
 
     NEWS["📰 NewsService\nGoogle News RSS → SQLite"]
-    DB[("🗄️ SQLite\nfavorites · news · conversations")]
-    SCHED["⏰ Scheduler\ndaily 08h + hourly"]
+    SCREENER["🔮 Screener\nRSI · MACD · Bollinger\nMédias · Volume · IBOV"]
+    PRED["📊 predictions\nscore · signal · backtest"]
+    DB[("🗄️ SQLite\nfavorites · news · conversations\npredictions")]
+    SCHED["⏰ Scheduler\ndaily 08h + screener"]
 
     USER -->|pergunta| CHAT
     CHAT --> LOOP
@@ -86,13 +93,17 @@ graph TD
     WEB --> NEWS
     NEWS --> DB
     FAVTOOLS --> DB
-    SCHED -->|cron| NEWS
+    SCHED -->|cron| NEWS & SCREENER
+    SCREENER -->|walk-forward backtest| PRED
+    PRED --> DB
 
     style USER fill:#F97316,color:#fff,stroke:none,rx:12
     style LLM fill:#1C1917,color:#fff,stroke:none,rx:12
     style CASCADE fill:#2B7BB5,color:#fff,stroke:none,rx:12
     style DB fill:#2D8E5E,color:#fff,stroke:none,rx:12
     style SCHED fill:#7E44A8,color:#fff,stroke:none,rx:12
+    style SCREENER fill:#A97B2A,color:#fff,stroke:none,rx:12
+    style PRED fill:#2D6E5E,color:#fff,stroke:none,rx:12
 ```
 
 ### Cascade de 5 Fontes B3
@@ -116,6 +127,16 @@ O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
 - **Notícias do ativo** injetadas no chat da página do ativo — respostas mais relevantes
 - **Retry em falhas** — botão de retry remove a resposta falha e reenvia; o agente sempre entrega algo mesmo sem dados completos
 - **Timing por step** nos logs — `ttftMs`, `llmMs`, `toolsMs` por cada round-trip de raciocínio
+- **Defesa contra prompt injection** — whitelist de chaves de contexto, role token stripping, sandwich defense e heurística de detecção
+
+### Screener de Predições
+
+O `Screener` roda sobre todos os tickers catalogados com concorrência controlada:
+
+1. **Score quantitativo** — 6 indicadores votam +1/0/-1: RSI(14), MACD(12,26,9), Bollinger Bands(20,2), Médias Móveis(20/50), Volume relativo e Contexto IBOV
+2. **Filtro de confluência** — apenas scores ≥ +4 (compra forte) ou ≤ -4 (venda forte) passam para a página de predições
+3. **Backtest walk-forward 60 dias** — re-aplica o mesmo score em cada dia histórico e verifica se D+5 confirmou a direção — a acurácia exibida é real, não hipotética
+4. **Bootstrap automático** — na primeira inicialização sem dados, o screener roda automaticamente em background após 5s
 
 ### Fallback de Modelo
 
@@ -133,7 +154,8 @@ OPENROUTER_MODEL_FALLBACK=openai/gpt-oss-20b:free,nvidia/nemotron-3-nano-30b-a3b
 Em `/settings` você acessa com o `ADMIN_TOKEN` do `.env` para:
 - Ver status do sistema (API, DB, modelo LLM, versão)
 - Consultar as variáveis de ambiente em uso
-- Disparar manualmente o job de refresh de favoritos
+- Disparar manualmente o job de refresh de notícias dos favoritos
+- Disparar manualmente o screener de predições (`/api/admin/jobs/daily-favorites/run` e `/api/b3/predictions/run`)
 
 ---
 
@@ -146,11 +168,12 @@ Em `/settings` você acessa com o `ADMIN_TOKEN` do `.env` para:
 | **Banco** | SQLite via better-sqlite3 (WAL mode) |
 | **LLM** | OpenRouter — cascade de modelos via `models: []`, suporte nativo a fallback |
 | **B3 Sources** | brapi.dev · Yahoo Finance · StatusInvest · Google Finance · Fundamentus |
-| **Notícias** | Google News RSS (por ticker e categoria) + SQLite cache + filtro anti-ruído |
+| **Notícias** | Google News RSS (por ticker e categoria) + SQLite cache + filtro anti-ruído + queries enriquecidas com nome da empresa |
+| **Predições** | Score multi-indicador (RSI, MACD, Bollinger, SMA, Volume, IBOV) + backtest walk-forward 60d |
 | **Web Fetch** | @mozilla/readability + turndown (HTML → Markdown) |
 | **Web Search** | DuckDuckGo HTML (ferramenta de agente) |
 | **Jobs** | croner |
-| **Testes** | Vitest — 207 testes API + 437 testes Web |
+| **Testes** | Vitest — 233 testes API + 437 testes Web |
 | **CI** | GitHub Actions (type-check + tests + build) |
 | **Package manager** | pnpm workspaces |
 
@@ -231,20 +254,25 @@ genie/
 ├─ apps/
 │  ├─ api/                    # Backend TypeScript (Fastify + SQLite)
 │  │  ├─ src/
-│  │  │  ├─ agent/            # QueryLoop, Registry, OpenRouterClient, prompts
-│  │  │  ├─ b3/               # Cascade + 5 fontes (brapi, yfinance, statusinvest, googlefinance, fundamentus)
-│  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob
-│  │  │  ├─ news/             # NewsService (Google News RSS + SQLite cache)
+│  │  │  ├─ agent/            # QueryLoop, Registry, OpenRouterClient, prompts, defesas anti-injection
+│  │  │  ├─ b3/               # Cascade + 5 fontes · screener · score · backtest · ibov · categories
+│  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob, PredictionsRefreshJob
+│  │  │  ├─ news/             # NewsService (Google News RSS + SQLite cache + queries enriquecidas)
 │  │  │  ├─ scripts/          # seed-news.ts · bench-models.ts
-│  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat, admin)
-│  │  │  ├─ store/            # SQLite repos (conversations, favorites, news)
+│  │  │  ├─ server/           # Fastify app + rotas (b3, news, favorites, chat, admin, predictions)
+│  │  │  ├─ store/            # SQLite repos (conversations, favorites, news, predictions)
 │  │  │  ├─ tools/            # b3_quote, b3_fundamentals, web_search, web_fetch, favorites
-│  │  │  └─ main.ts           # Bootstrap completo
-│  │  └─ tests/               # 207 testes (unit + integration + e2e parity)
+│  │  │  └─ main.ts           # Bootstrap + auto-screener se predictions vazia
+│  │  └─ tests/               # 233 testes (unit + integration + e2e parity)
 │  └─ web/                    # Frontend SvelteKit (Orb Quantum Design System)
+│     └─ src/routes/
+│        ├─ +layout.svelte    # Fade com slide entre rotas
+│        ├─ predicoes/        # Página de predições com glossário e stagger animations
+│        ├─ rankings/         # Rankings clicáveis → /asset/[ticker]
+│        └─ asset/[ticker]/   # Análise completa + chat com contexto do ativo
 ├─ .github/workflows/ci.yml   # CI: type-check + testes + build para API e Web
 ├─ packages/
-│  └─ shared/                 # Tipos compartilhados (Article, Quote, Fundamentals, StreamEvent…)
+│  └─ shared/                 # Tipos compartilhados (Article, Quote, Fundamentals, PredictionItem…)
 ├─ tsconfig.base.json
 └─ pnpm-workspace.yaml
 ```
