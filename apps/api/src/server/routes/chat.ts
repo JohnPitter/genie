@@ -34,11 +34,17 @@ export async function registerChatRoutes(app: FastifyInstance, deps: AppDeps): P
       conversationId = createConversation(deps.db, '');
     }
 
-    // Load history
+    // Load history — filtra apenas user/assistant. Se por algum motivo uma
+    // mensagem de outra role foi persistida, ignoramos para prevenir que o
+    // histórico seja usado como vetor de prompt injection.
     const dbMsgs = getMessages(deps.db, conversationId);
     const recent = dbMsgs.length > MAX_HISTORY ? dbMsgs.slice(-MAX_HISTORY) : dbMsgs;
-    const history: Message[] = recent.map(m => ({ role: m.role as Message['role'], content: m.content }));
+    const history: Message[] = recent
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({ role: m.role as Message['role'], content: m.content }));
 
+    // buildMessages() sanitiza o input do usuário e filtra contextData
+    // para whitelist — blinda contra prompt injection.
     const messages = buildMessages(history, message, contextData);
 
     // SSE headers — Fastify raw response
