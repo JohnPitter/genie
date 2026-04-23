@@ -23,6 +23,7 @@ import { GoogleNewsSearcher } from './news/google_news.ts';
 import { Scheduler } from './jobs/scheduler.ts';
 import { registerJobs } from './jobs/registrar.ts';
 import { DailyFavoritesJob } from './jobs/daily_favorites.ts';
+import { PredictionsRefreshJob } from './jobs/predictions_refresh.ts';
 import { buildApp } from './server/app.ts';
 
 const config = getConfig();
@@ -99,6 +100,30 @@ const app = await buildApp({
 });
 await app.listen({ port: config.PORT, host: '0.0.0.0' });
 log.info({ port: config.PORT }, 'server listening');
+
+// ── Bootstrap: se a base de predições está vazia (primeiro deploy ou DB
+//    novo), dispara o screener em background para que /predicoes tenha
+//    dados logo de cara, sem esperar o cron das 10:15.
+//    Delay de 5s para não atrasar o startup + dar tempo de os logs
+//    aparecerem no dashboard.
+function bootstrapIfEmpty(): void {
+  try {
+    const row = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM predictions').get();
+    if (!row || row.count === 0) {
+      log.info('bootstrap: predictions table is empty, scheduling screener in 5s');
+      setTimeout(() => {
+        const job = new PredictionsRefreshJob(db, log);
+        job.run().catch(err => log.error({ err }, 'bootstrap: predictions refresh failed'));
+      }, 5000);
+    } else {
+      log.debug({ count: row.count }, 'bootstrap: predictions table already populated, skipping');
+    }
+  } catch (err) {
+    log.warn({ err }, 'bootstrap: predictions check failed (non-fatal)');
+  }
+}
+
+bootstrapIfEmpty();
 
 // Graceful shutdown
 function shutdown(): void {
