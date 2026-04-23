@@ -40,8 +40,8 @@ const TICKERS_BY_CATEGORY: Record<Category, string[]> = {
     'ECOO11',
   ],
   saneamento: [
-    'SBSP3', 'CSMG3', 'SAPR11', 'SAPR4', 'SAPR3', 'SANB3',
-    'IGUASANEAMENTO', 'CSUD3',
+    'SBSP3', 'CSMG3', 'SAPR11', 'SAPR4', 'SAPR3',
+    'IGUA3', 'AEGP3',
   ],
   tecnologia: [
     'TOTS3', 'POSI3', 'INTB3', 'CASH3', 'IFCM3', 'TIMS3', 'VIVT3',

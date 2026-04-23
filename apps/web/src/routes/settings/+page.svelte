@@ -130,9 +130,7 @@
               bind:this={pinInput}
               bind:value={pin}
               type="text"
-              inputmode="numeric"
-              maxlength="8"
-              placeholder="••••"
+              placeholder="ADMIN_TOKEN"
               class="gate__input"
               class:gate__input--error={!!pinError}
               aria-label="PIN de administrador"
@@ -143,9 +141,7 @@
               bind:this={pinInput}
               bind:value={pin}
               type="password"
-              inputmode="numeric"
-              maxlength="8"
-              placeholder="••••"
+              placeholder="ADMIN_TOKEN"
               class="gate__input"
               class:gate__input--error={!!pinError}
               aria-label="PIN de administrador"
@@ -407,9 +403,7 @@
     border-radius: var(--radius-md);
     color: var(--text-primary);
     font-family: var(--font-technical);
-    font-size: 18px;
-    letter-spacing: 0.25em;
-    text-align: center;
+    font-size: 15px;
     outline: none;
     transition: border-color var(--dur-fast) var(--ease-standard);
   }

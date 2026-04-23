@@ -19,6 +19,7 @@ import { Registry } from './agent/tool.ts';
 import { OpenRouterClient } from './agent/openrouter.ts';
 import { QueryLoop } from './agent/loop.ts';
 import { NewsService } from './news/service.ts';
+import { GoogleNewsSearcher } from './news/google_news.ts';
 import { Scheduler } from './jobs/scheduler.ts';
 import { registerJobs } from './jobs/registrar.ts';
 import { DailyFavoritesJob } from './jobs/daily_favorites.ts';
@@ -71,8 +72,9 @@ const llm = new OpenRouterClient(config.OPENROUTER_API_KEY, log, {
 const loop = new QueryLoop(llm, registry, config.OPENROUTER_MODEL, log);
 log.info({ model: config.OPENROUTER_MODEL }, 'agent query loop initialised');
 
-// News service
-const newsSvc = new NewsService(db, webSearch, log);
+// News service — uses Google News RSS (reliable, no CAPTCHA blocks)
+const googleNews = new GoogleNewsSearcher(log);
+const newsSvc = new NewsService(db, googleNews, log);
 
 // Job scheduler + manually-runnable daily job
 const sched = new Scheduler(log);
