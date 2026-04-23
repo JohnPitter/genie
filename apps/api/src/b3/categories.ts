@@ -7,6 +7,61 @@ export type Category =
   | 'tecnologia'
   | 'saude';
 
+// Primary search name for each ticker, used to build richer news queries.
+// Prefer the most commonly used name in financial news headlines.
+const TICKER_PRIMARY_NAME: Record<string, string> = {
+  // Financeiro
+  ITUB4: 'Itaú', ITUB3: 'Itaú', BBDC4: 'Bradesco', BBDC3: 'Bradesco',
+  BBAS3: 'Banco do Brasil', SANB11: 'Santander', BPAC11: 'BTG Pactual',
+  BPAC3: 'BTG Pactual', IRBR3: 'IRB Brasil', B3SA3: 'B3', CIEL3: 'Cielo',
+  SULA11: 'SulAmérica', WIZC3: 'Wiz Soluções', BBSE3: 'BB Seguridade', PSSA3: 'Porto Seguro',
+  // Commodities
+  VALE3: 'Vale', PETR4: 'Petrobras', PETR3: 'Petrobras',
+  SUZB3: 'Suzano', CSNA3: 'CSN', GGBR4: 'Gerdau', GGBR3: 'Gerdau',
+  USIM5: 'Usiminas', USIM3: 'Usiminas', GOAU4: 'Metalúrgica Gerdau',
+  BRAP4: 'Bradespar', CBAV3: 'CBA', CMIN3: 'CSN Mineração',
+  PRIO3: 'PetroRio', RECV3: 'Recôncavo', RRRP3: '3R Petroleum',
+  UGPA3: 'Ultrapar', VBBR3: 'Vibra Energia',
+  AGRO3: 'BrasilAgro', SLCE3: 'SLC Agrícola', SMTO3: 'São Martinho',
+  CAML3: 'Camil', JALL3: 'Jalles Machado', TTEN3: '3tentos',
+  // Varejo
+  MGLU3: 'Magazine Luiza', LREN3: 'Lojas Renner', AMER3: 'Americanas',
+  VIIA3: 'Via Varejo', ASAI3: 'Assaí', PCAR3: 'Grupo Pão de Açúcar',
+  CRFB3: 'Carrefour', SOMA3: 'Grupo Soma', ARZZ3: 'Arezzo',
+  VIVA3: 'Vivara', CEAB3: 'C&A', AMAR3: 'Marisa',
+  ALPA4: 'Alpargatas', GRND3: 'Grendene', NTCO3: 'Natura',
+  SMFT3: 'SmartFit', ESPA3: 'Espaçolaser', LWSA3: 'Locaweb',
+  // Energia
+  ELET3: 'Eletrobras', ELET6: 'Eletrobras', ENGI11: 'Energisa',
+  EGIE3: 'Engie Brasil', CPFE3: 'CPFL Energia', TAEE11: 'Taesa',
+  TAEE4: 'Taesa', CMIG4: 'Cemig', CMIG3: 'Cemig',
+  CPLE6: 'Copel', CPLE3: 'Copel', AURE3: 'Auren Energia',
+  ENEV3: 'Eneva', CESP3: 'Cesp', ENBR3: 'EDP Brasil',
+  EQTL3: 'Equatorial', NEOE3: 'Neoenergia', AESB3: 'AES Brasil',
+  TRPL4: 'ISA CTEEP', TRPL3: 'ISA CTEEP',
+  // Saneamento
+  SBSP3: 'Sabesp', CSMG3: 'Copasa', SAPR11: 'Sanepar',
+  SAPR4: 'Sanepar', SAPR3: 'Sanepar', IGUA3: 'Iguá Saneamento', AEGP3: 'AES Eletropaulo',
+  // Tecnologia
+  TOTS3: 'Totvs', POSI3: 'Positivo', INTB3: 'Intelbras',
+  CASH3: 'Méliuz', IFCM3: 'Infracommerce', TIMS3: 'TIM',
+  VIVT3: 'Vivo Telefônica', OIBR3: 'Oi', OIBR4: 'Oi',
+  DESK3: 'Desk Manager', BRIT3: 'Brisanet', ENJU3: 'Enjoei',
+  AAPL34: 'Apple', MSFT34: 'Microsoft', GOGL34: 'Google Alphabet',
+  AMZO34: 'Amazon', META34: 'Meta', NVDC34: 'Nvidia',
+  TSLA34: 'Tesla', NFLX34: 'Netflix', GOOGL34: 'Alphabet',
+  UBER34: 'Uber',
+  // Saúde
+  RDOR3: 'Rede Dor', HAPV3: 'Hapvida', FLRY3: 'Fleury',
+  DASA3: 'Dasa', GNDI3: 'Gndi', QUAL3: 'Qualicorp',
+  PARD3: 'Pardini', BLAU3: 'Blau Farmacêutica', ODPV3: 'Odontoprev',
+  ONCO3: 'Oncoclínicas', MATD3: 'Mater Dei', AALR3: 'Alliar', CRVS3: 'Corcovado',
+};
+
+export function primaryNameFor(ticker: string): string | undefined {
+  return TICKER_PRIMARY_NAME[ticker.toUpperCase()];
+}
+
 export const ALL_CATEGORIES: Category[] = [
   'financeiro', 'commodities', 'varejo', 'energia', 'saneamento', 'tecnologia', 'saude',
 ];

@@ -1,5 +1,5 @@
 import { TTLCache } from '../b3/cache.ts';
-import { tickersFor, categoryOf } from '../b3/categories.ts';
+import { tickersFor, categoryOf, primaryNameFor } from '../b3/categories.ts';
 import type { Category } from '../b3/categories.ts';
 import { listByCategory, listByTicker, upsertArticles } from '../store/news.ts';
 import type { Article } from '../store/news.ts';
@@ -165,7 +165,9 @@ export class NewsService {
   private async searchForTickerSingle(ticker: string, signal?: AbortSignal): Promise<Article[]> {
     const cat = categoryOf(ticker) ?? '';
     const year = new Date().getFullYear();
-    const query = `${ticker} notícias B3 ${year} OR ${year - 1}`;
+    const name = primaryNameFor(ticker);
+    const nameClause = name ? ` OR "${name}"` : '';
+    const query = `${ticker}${nameClause} notícias B3 ${year} OR ${year - 1}`;
     const results = await this.searcher.search(query, DEFAULT_SEARCH_LIMIT, signal);
 
     const seen = new Set<string>();
@@ -200,7 +202,9 @@ export class NewsService {
     const perResults = await Promise.all(
       tickers.map(async ticker => {
         const year = new Date().getFullYear();
-        const query = `${ticker} notícias B3 ${year} OR ${year - 1}`;
+        const name = primaryNameFor(ticker);
+        const nameClause = name ? ` OR "${name}"` : '';
+        const query = `${ticker}${nameClause} notícias B3 ${year} OR ${year - 1}`;
         try {
           const hits = await this.searcher.search(query, perTicker, signal);
           this.log.debug({ ticker, results: hits.length }, 'news: search done');
