@@ -10,6 +10,7 @@
 
   $: editorial = data.editorial;
   $: archive = data.archive;
+  $: quotes = data.quotes ?? {};
   $: sourceArticles = editorial.sourceArticles ?? [];
 </script>
 
@@ -36,7 +37,7 @@
 
       <div class="editorial-page__sections">
         {#each editorial.sections as section, i (section.category + i)}
-          <EditorialSection {section} articles={sourceArticles} />
+          <EditorialSection {section} articles={sourceArticles} {quotes} />
         {/each}
       </div>
     </main>

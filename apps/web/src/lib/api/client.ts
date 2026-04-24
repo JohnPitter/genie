@@ -124,6 +124,14 @@ export class ApiClient {
     return this.request<PredictionItem>('GET', `/api/b3/predictions/${encodeURIComponent(ticker)}`);
   }
 
+  /**
+   * Busca quotes de múltiplos tickers em paralelo (max 20).
+   * Retorna apenas os tickers que responderam — falhas individuais são ignoradas.
+   */
+  batchQuotes(tickers: string[]): Promise<Record<string, Quote>> {
+    return this.request<Record<string, Quote>>('POST', '/api/b3/quotes/batch', { tickers });
+  }
+
   /** Última edição do editorial financeiro (gerado 4x/dia BRT). */
   getLatestEditorial(): Promise<Editorial> {
     return this.request<Editorial>('GET', '/api/editorials/latest');

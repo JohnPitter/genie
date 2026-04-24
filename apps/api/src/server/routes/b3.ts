@@ -64,4 +64,42 @@ export async function registerB3Routes(app: FastifyInstance, deps: AppDeps): Pro
     const result = ALL_CATEGORIES.map(cat => ({ category: cat, tickers: tickersFor(cat) }));
     return reply.send(result);
   });
+
+  app.post<{ Body: { tickers: unknown } }>('/api/b3/quotes/batch', async (req, reply) => {
+    if (!deps.b3) return reply.status(503).send({ error: 'b3 data source not configured' });
+
+    const { tickers } = req.body;
+    if (!Array.isArray(tickers) || tickers.length === 0) {
+      return reply.status(400).send({ error: 'body must contain a non-empty tickers array' });
+    }
+
+    const validTickers: string[] = [];
+    for (const t of tickers.slice(0, 20)) {
+      if (typeof t !== 'string') continue;
+      const upper = t.toUpperCase();
+      try {
+        validateTicker(upper);
+        validTickers.push(upper);
+      } catch {
+        // silently skip invalid tickers
+      }
+    }
+
+    if (validTickers.length === 0) {
+      return reply.status(400).send({ error: 'no valid tickers provided' });
+    }
+
+    const results = await Promise.allSettled(
+      validTickers.map(ticker => deps.b3!.quote(ticker).then(quote => ({ ticker, quote }))),
+    );
+
+    const quotes: Record<string, unknown> = {};
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        quotes[result.value.ticker] = result.value.quote;
+      }
+    }
+
+    return reply.header('Cache-Control', 'public, max-age=60').send(quotes);
+  });
 }

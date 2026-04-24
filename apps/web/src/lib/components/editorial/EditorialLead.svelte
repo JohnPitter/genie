@@ -1,11 +1,12 @@
 <script lang="ts">
   export let title: string;
   export let body: string;
+  export let editionLabel = ''; // ex: "Edição 3 · Meio-dia"
 </script>
 
 <section class="editorial-lead" aria-label="Manchete do editorial">
   <h2 class="editorial-lead__title">{title}</h2>
-  <p class="editorial-lead__body">{body}</p>
+  <p class="editorial-lead__body editorial-lead__body--dropcap">{body}</p>
 </section>
 
 <style>
@@ -51,10 +52,21 @@
     margin: 0;
     font-family: var(--font-body, sans-serif);
     font-size: 17px;
-    line-height: 1.6;
+    line-height: 1.7;
     color: var(--text-secondary, #b8bac4);
     max-width: 760px;
     letter-spacing: -0.005em;
+  }
+
+  .editorial-lead__body--dropcap::first-letter {
+    float: left;
+    font-size: 4.2em;
+    line-height: 0.78;
+    margin: 0.06em 0.1em 0 0;
+    font-weight: 700;
+    color: var(--accent-lilac, #a79bff);
+    font-family: var(--font-display, serif);
+    letter-spacing: -0.02em;
   }
 
   @media (max-width: 768px) {

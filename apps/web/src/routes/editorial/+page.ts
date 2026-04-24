@@ -1,11 +1,12 @@
 import type { PageLoad } from './$types';
 import { ApiClient } from '$lib/api/client';
-import type { Editorial, EditorialSummary } from '@genie/shared';
+import type { Editorial, EditorialSummary, Quote } from '@genie/shared';
 
 export const load: PageLoad = async ({ fetch }) => {
   const client = new ApiClient({ fetch });
   let editorial: Editorial | null = null;
   let archive: EditorialSummary[] = [];
+  let quotes: Record<string, Quote> = {};
   let loadError: string | null = null;
 
   const [editorialResult, archiveResult] = await Promise.allSettled([
@@ -27,5 +28,20 @@ export const load: PageLoad = async ({ fetch }) => {
     archive = archiveResult.value;
   }
 
-  return { editorial, archive, loadError };
+  // Busca quotes de todos os tickers em destaque do editorial
+  if (editorial) {
+    const tickers = [
+      ...new Set(editorial.sections.flatMap(s => s.highlightTickers)),
+    ].slice(0, 20);
+
+    if (tickers.length > 0) {
+      try {
+        quotes = await client.batchQuotes(tickers);
+      } catch {
+        // quotes são best-effort — não falha a página
+      }
+    }
+  }
+
+  return { editorial, archive, quotes, loadError };
 };

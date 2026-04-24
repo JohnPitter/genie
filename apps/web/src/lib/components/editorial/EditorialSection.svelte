@@ -1,10 +1,11 @@
 <script lang="ts">
-  import Badge from '$lib/components/ui/Badge.svelte';
   import { ExternalLink } from 'lucide-svelte';
-  import type { EditorialSection, Article, Category } from '@genie/shared';
+  import QuoteBadge from './QuoteBadge.svelte';
+  import type { EditorialSection, Article, Category, Quote } from '@genie/shared';
 
   export let section: EditorialSection;
   export let articles: Article[] = [];
+  export let quotes: Record<string, Quote> = {};
 
   const CATEGORY_LABEL: Record<Category, string> = {
     financeiro: 'Financeiro',
@@ -32,14 +33,37 @@
 
   $: categoryLabel = CATEGORY_LABEL[section.category] ?? section.category;
   $: categoryEmoji = CATEGORY_EMOJI[section.category] ?? '📰';
+
+  // Sentimento do setor baseado nas cotações dos tickers em destaque
+  $: sectionQuotes = section.highlightTickers
+    .map(t => quotes[t])
+    .filter((q): q is Quote => q !== undefined);
+
+  $: up = sectionQuotes.filter(q => q.changePct > 0).length;
+  $: down = sectionQuotes.filter(q => q.changePct < 0).length;
+  $: sentiment = sectionQuotes.length === 0
+    ? null
+    : up > down ? 'alta' : down > up ? 'baixa' : 'lateral';
+  $: sentimentLabel = sentiment === 'alta' ? 'Alta' : sentiment === 'baixa' ? 'Baixa' : 'Lateral';
+  $: sentimentIcon = sentiment === 'alta' ? '↑' : sentiment === 'baixa' ? '↓' : '→';
 </script>
 
 <article class="editorial-section" data-category={section.category}>
   <header class="editorial-section__header">
-    <span class="editorial-section__category">
-      <span class="editorial-section__emoji" aria-hidden="true">{categoryEmoji}</span>
-      <span class="editorial-section__category-label">{categoryLabel}</span>
-    </span>
+    <div class="editorial-section__header-row">
+      <span class="editorial-section__category">
+        <span class="editorial-section__emoji" aria-hidden="true">{categoryEmoji}</span>
+        <span class="editorial-section__category-label">{categoryLabel}</span>
+      </span>
+      {#if sentiment}
+        <span
+          class="editorial-section__sentiment"
+          class:editorial-section__sentiment--up={sentiment === 'alta'}
+          class:editorial-section__sentiment--down={sentiment === 'baixa'}
+          class:editorial-section__sentiment--flat={sentiment === 'lateral'}
+        >{sentimentIcon} {sentimentLabel}</span>
+      {/if}
+    </div>
     <h3 class="editorial-section__title">{section.title}</h3>
   </header>
 
@@ -48,9 +72,7 @@
   {#if section.highlightTickers.length > 0}
     <div class="editorial-section__tickers" aria-label="Tickers em destaque">
       {#each section.highlightTickers as ticker (ticker)}
-        <a href={`/asset/${ticker}`} class="editorial-section__ticker-link">
-          <Badge variant="gold" size="sm">{ticker}</Badge>
-        </a>
+        <QuoteBadge {ticker} quote={quotes[ticker]} />
       {/each}
     </div>
   {/if}
@@ -123,6 +145,13 @@
     gap: 8px;
   }
 
+  .editorial-section__header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
   .editorial-section__category {
     display: inline-flex;
     align-items: center;
@@ -133,6 +162,35 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-muted, #6c6f7a);
+  }
+
+  .editorial-section__sentiment {
+    font-family: var(--font-technical, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .editorial-section__sentiment--up {
+    color: rgb(126, 214, 167);
+    background: rgba(126, 214, 167, 0.1);
+    border-color: rgba(126, 214, 167, 0.25);
+  }
+
+  .editorial-section__sentiment--down {
+    color: rgb(240, 124, 124);
+    background: rgba(240, 124, 124, 0.1);
+    border-color: rgba(240, 124, 124, 0.25);
+  }
+
+  .editorial-section__sentiment--flat {
+    color: var(--text-muted, #6c6f7a);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 
   .editorial-section__emoji {
@@ -161,15 +219,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-  }
-
-  .editorial-section__ticker-link {
-    text-decoration: none;
-    transition: transform var(--dur-fast, 120ms) ease;
-  }
-
-  .editorial-section__ticker-link:hover {
-    transform: translateY(-1px);
   }
 
   .editorial-section__sources {
