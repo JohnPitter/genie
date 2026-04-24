@@ -42,6 +42,8 @@ export interface ConfigResponse {
 // ── Client ───────────────────────────────────────────────────────────────────
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const ANALYSIS_TIMEOUT_MS = 75_000;  // analyst: até 45s server-side + retries + rede
+const BATCH_QUOTES_TIMEOUT_MS = 60_000;  // cascade pode cair no StatusInvest (~15-20s por ticker)
 
 export class ApiClient {
   private readonly baseURL: string;
@@ -102,10 +104,10 @@ export class ApiClient {
 
   /**
    * Fetches AI-powered technical analysis for a B3 ticker.
-   * Takes 10-30s on first call (LLM + historical data). Cached 30min server-side.
+   * Takes 10-45s on first call (LLM + historical data + retries). Cached 30min server-side.
    */
   getStockAnalysis(ticker: string): Promise<StockAnalysis> {
-    return this.request<StockAnalysis>('GET', `/api/b3/analysis/${encodeURIComponent(ticker)}`);
+    return this.request<StockAnalysis>('GET', `/api/b3/analysis/${encodeURIComponent(ticker)}`, undefined, undefined, ANALYSIS_TIMEOUT_MS);
   }
 
   /**
@@ -129,7 +131,7 @@ export class ApiClient {
    * Retorna apenas os tickers que responderam — falhas individuais são ignoradas.
    */
   batchQuotes(tickers: string[]): Promise<Record<string, Quote>> {
-    return this.request<Record<string, Quote>>('POST', '/api/b3/quotes/batch', { tickers });
+    return this.request<Record<string, Quote>>('POST', '/api/b3/quotes/batch', { tickers }, undefined, BATCH_QUOTES_TIMEOUT_MS);
   }
 
   /** Última edição do editorial financeiro (gerado 4x/dia BRT). */
@@ -201,8 +203,9 @@ export class ApiClient {
     path: string,
     body: unknown,
     extraHeaders: Record<string, string>,
+    timeoutMs?: number,
   ): Promise<T> {
-    return this.request<T>(method, path, body, extraHeaders);
+    return this.request<T>(method, path, body, extraHeaders, timeoutMs);
   }
 
   private async request<T>(
@@ -210,10 +213,11 @@ export class ApiClient {
     path: string,
     body?: unknown,
     extraHeaders?: Record<string, string>,
+    timeoutMs = REQUEST_TIMEOUT_MS,
   ): Promise<T> {
     const url = `${this.baseURL}${path}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const headers: Record<string, string> = {
       Accept: 'application/json',
