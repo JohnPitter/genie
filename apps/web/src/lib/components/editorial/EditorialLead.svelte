@@ -43,8 +43,8 @@
     line-height: 1.15;
     color: var(--text-primary, #fafafa);
     max-width: 920px;
-    word-break: break-word;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
 
   .editorial-lead__body {

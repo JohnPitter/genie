@@ -123,8 +123,8 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 10px;
-    word-break: break-word;
-    overflow-wrap: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
     min-width: 0;
   }
 
