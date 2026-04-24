@@ -9,6 +9,7 @@ import type { AIAnalysis, TechnicalIndicators } from './types.ts';
 import type { Fundamentals } from './types.ts';
 import { rsiLabel, macdSignal, bollingerPosition } from './indicators.ts';
 import { buildModelsChain } from '../agent/llm-fallback.ts';
+import { parseTolerantJson } from '../lib/json-tolerant.ts';
 import type { Logger } from 'pino';
 
 const ANALYSIS_TIMEOUT_MS = 45_000;
@@ -119,9 +120,10 @@ export async function analyseStock(
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: 600,
+      max_tokens: 900,
       temperature: 0.2,
       stream: false,
+      response_format: { type: 'json_object' },
     };
     if (fallbacksForAttempt.length > 0) {
       payload.models = [primary, ...fallbacksForAttempt].slice(0, 3);
@@ -195,19 +197,17 @@ export async function analyseStock(
 
 /** Try to extract + validate a JSON analysis from the LLM raw response. */
 function tryParseAnalysis(raw: string): AIAnalysis | null {
-  if (!raw || !raw.trim()) return null;
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return null;
-  try {
-    const parsed = JSON.parse(jsonMatch[0]) as AIAnalysis;
-    if (!['compra', 'venda', 'neutro'].includes(parsed.sinal)) parsed.sinal = 'neutro';
-    if (!['baixa', 'media', 'alta'].includes(parsed.confianca)) parsed.confianca = 'baixa';
-    if (!Array.isArray(parsed.positivos)) parsed.positivos = [];
-    if (!Array.isArray(parsed.negativos)) parsed.negativos = [];
-    return parsed;
-  } catch {
-    return null;
-  }
+  const parsed = parseTolerantJson(raw);
+  if (!parsed || typeof parsed !== 'object') return null;
+  const obj = parsed as Partial<AIAnalysis>;
+  // Campos mínimos necessários para considerar a análise utilizável
+  if (typeof obj.suporte !== 'number' || typeof obj.resistencia !== 'number') return null;
+  if (typeof obj.racional !== 'string' || !obj.racional.trim()) return null;
+  if (!['compra', 'venda', 'neutro'].includes(obj.sinal as string)) obj.sinal = 'neutro';
+  if (!['baixa', 'media', 'alta'].includes(obj.confianca as string)) obj.confianca = 'baixa';
+  if (!Array.isArray(obj.positivos)) obj.positivos = [];
+  if (!Array.isArray(obj.negativos)) obj.negativos = [];
+  return obj as AIAnalysis;
 }
 
 /** Deterministic analysis baseada apenas nos indicadores — usada quando o LLM

@@ -3,6 +3,7 @@ import type { AppDeps } from '../app.ts';
 import { fetchHistory } from '../../b3/history.ts';
 import { computeIndicators } from '../../b3/indicators.ts';
 import { analyseStock } from '../../b3/analyst.ts';
+import { isFII } from '../../b3/categories.ts';
 import type { StockAnalysis } from '../../b3/types.ts';
 import { validateTicker } from '../../b3/source.ts';
 import { TTLCache } from '../../b3/cache.ts';
@@ -48,13 +49,18 @@ export async function registerAnalysisRoutes(app: FastifyInstance, deps: AppDeps
         );
 
         // 3. Fetch fundamentals (best-effort — don't fail if unavailable)
+        // Skip para FIIs: P/L, ROE, margem líquida não fazem sentido para
+        // fundos imobiliários e nenhum scraper cobre. Tentar mesmo assim
+        // gasta ~5s em 5 chamadas que vão falhar todas.
         let fundamentals = null;
-        if (deps.b3) {
+        if (deps.b3 && !isFII(ticker)) {
           try {
             fundamentals = await deps.b3.fundamentals(ticker);
           } catch {
             deps.log.debug({ ticker }, 'analysis: fundamentals unavailable, proceeding without');
           }
+        } else if (isFII(ticker)) {
+          deps.log.debug({ ticker }, 'analysis: ticker is FII, skipping fundamentals');
         }
 
         // 4. Fetch recent news snippets for the ticker

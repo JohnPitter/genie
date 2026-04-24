@@ -2,6 +2,7 @@ import type { Logger } from 'pino';
 import type { EditorialCategory, EditorialSection } from './types.ts';
 import { EDITORIAL_CATEGORIES } from './types.ts';
 import { buildModelsChain } from '../agent/llm-fallback.ts';
+import { parseTolerantJson } from '../lib/json-tolerant.ts';
 import { buildEditorialPrompt, SYSTEM_PROMPT } from './prompt.ts';
 import type { PromptArticle } from './store.ts';
 
@@ -55,9 +56,10 @@ export async function generateEditorial(input: GenerateInput): Promise<GenerateO
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: 2000,
+      max_tokens: 4000,
       temperature: 0.4,
       stream: false,
+      response_format: { type: 'json_object' },
     };
     if (fallbacks.length > 0) payload.models = [primary, ...fallbacks].slice(0, 3);
 
@@ -129,16 +131,9 @@ export function parseEditorialResponse(
   raw: string,
   validArticleIds: Set<number>,
 ): { leadTitle: string; leadBody: string; sections: EditorialSection[] } | null {
-  if (!raw || !raw.trim()) return null;
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-
-  let obj: Record<string, unknown>;
-  try {
-    obj = JSON.parse(match[0]);
-  } catch {
-    return null;
-  }
+  const parsed = parseTolerantJson(raw);
+  if (!parsed || typeof parsed !== 'object') return null;
+  const obj = parsed as Record<string, unknown>;
 
   const leadTitle = typeof obj.leadTitle === 'string' ? obj.leadTitle.trim() : '';
   const leadBody = typeof obj.leadBody === 'string' ? obj.leadBody.trim() : '';

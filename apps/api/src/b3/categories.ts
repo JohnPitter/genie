@@ -58,6 +58,23 @@ const TICKER_PRIMARY_NAME: Record<string, string> = {
   ONCO3: 'Oncoclínicas', MATD3: 'Mater Dei', AALR3: 'Alliar', CRVS3: 'Corcovado',
 };
 
+/**
+ * FIIs (fundos imobiliários) na B3 têm tickers terminados em '11' e seguem
+ * código de 4 letras + '11' (ex: HGLG11, XPML11, MXRF11). Diferente de units
+ * (ex: SANB11, BPAC11) que são empresas com ações + ações preferenciais
+ * agrupadas — essas estão no catálogo de TICKER_PRIMARY_NAME.
+ *
+ * Heurística: termina em '11' E não está mapeado como ação no catálogo.
+ * Para FIIs, métricas fundamentais tradicionais (P/L, ROE, margem líquida)
+ * não fazem sentido — usar isFII() para pular fontes de fundamentals.
+ */
+export function isFII(ticker: string): boolean {
+  const t = ticker.toUpperCase();
+  if (!/^[A-Z]{4}11$/.test(t)) return false;
+  // Units conhecidas (empresas que terminam em 11 mas são ações, não FIIs)
+  return !(t in TICKER_PRIMARY_NAME);
+}
+
 export function primaryNameFor(ticker: string): string | undefined {
   return TICKER_PRIMARY_NAME[ticker.toUpperCase()];
 }
