@@ -8,35 +8,11 @@
 import type { AIAnalysis, TechnicalIndicators } from './types.ts';
 import type { Fundamentals } from './types.ts';
 import { rsiLabel, macdSignal, bollingerPosition } from './indicators.ts';
+import { buildModelsChain } from '../agent/llm-fallback.ts';
 import type { Logger } from 'pino';
 
 const ANALYSIS_TIMEOUT_MS = 45_000;
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
-const MAX_MODELS = 3;
-
-/** Same emergency list used by QueryLoop — garante resiliência quando o usuário
- * configurou só o OPENROUTER_MODEL primário sem fallbacks. */
-const EMERGENCY_FREE_FALLBACKS = [
-  'openai/gpt-oss-120b:free',
-  'openai/gpt-oss-20b:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
-];
-
-function buildModelsChain(model: string, fallback?: string): string[] | undefined {
-  const configured = (fallback ?? '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
-
-  if (configured.length > 0) {
-    return [model, ...configured].slice(0, MAX_MODELS);
-  }
-  if (model.endsWith(':free')) {
-    const auto = EMERGENCY_FREE_FALLBACKS.filter(m => m !== model);
-    return [model, ...auto].slice(0, MAX_MODELS);
-  }
-  return undefined;
-}
 
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));

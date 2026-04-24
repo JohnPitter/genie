@@ -1,24 +1,10 @@
 import type { Message, ToolCallRequest } from './message.ts';
 import type { Registry } from './tool.ts';
 import type { OpenRouterClient, Usage } from './openrouter.ts';
+import { buildModelsChain } from './llm-fallback.ts';
 import type { Logger } from 'pino';
 
 const DEFAULT_MAX_STEPS = 20;
-
-/**
- * Emergency fallback chain — usado quando o usuário NÃO configurou
- * OPENROUTER_MODEL_FALLBACK mas está usando um modelo `:free` que pode
- * falhar. Garante que todo deploy tenha resiliência mesmo sem config extra.
- * Ordem baseada no benchmark (bench-models.ts): estáveis + rápidos primeiro.
- *
- * OpenRouter aceita máx 3 modelos por request, então mantemos apenas os 2
- * melhores como fallback (primário + 2 = 3 total após cascade assembly).
- */
-const EMERGENCY_FREE_FALLBACKS = [
-  'openai/gpt-oss-120b:free',
-  'openai/gpt-oss-20b:free',
-  'nvidia/nemotron-3-nano-30b-a3b:free',
-];
 
 export interface TokenUsage {
   promptTokens: number;
@@ -43,7 +29,7 @@ interface ToolCallBuilder {
 
 export class QueryLoop {
   private readonly maxSteps: number;
-  private readonly fallbackModels: string[];
+  private readonly modelsChain: string[] | undefined;
 
   constructor(
     private readonly llm: OpenRouterClient,
@@ -53,24 +39,13 @@ export class QueryLoop {
     opts: { maxSteps?: number; fallbackModels?: string[] | string } = {},
   ) {
     this.maxSteps = opts.maxSteps ?? DEFAULT_MAX_STEPS;
-    const raw = opts.fallbackModels;
-    const configured = Array.isArray(raw)
-      ? raw.filter(m => m.trim().length > 0)
-      : typeof raw === 'string'
-        ? raw.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : [];
+    this.modelsChain = buildModelsChain(model, opts.fallbackModels);
 
-    // Auto-fallback para deploys com .env antigo: se o usuário usa um modelo
-    // `:free` sem configurar fallbacks, aplicamos a cascata de emergência.
-    // Filtramos o próprio modelo primário da lista para não duplicar.
-    if (configured.length === 0 && model.endsWith(':free')) {
-      this.fallbackModels = EMERGENCY_FREE_FALLBACKS.filter(m => m !== model);
+    if (this.modelsChain && this.modelsChain.length > 1) {
       this.log.info(
-        { primary: model, fallbacks: this.fallbackModels },
-        'agent: no fallbacks configured — using emergency free cascade',
+        { primary: model, chain: this.modelsChain },
+        'agent: model fallback chain active',
       );
-    } else {
-      this.fallbackModels = configured;
     }
   }
 
@@ -80,13 +55,7 @@ export class QueryLoop {
     signal?: AbortSignal,
   ): Promise<Message[]> {
     const tools = this.registry.schemas();
-
-    // OpenRouter aceita no máximo 3 modelos no array `models`.
-    // Priorizamos primário + 2 primeiros fallbacks.
-    const MAX_MODELS = 3;
-    const modelsChain = this.fallbackModels.length > 0
-      ? [this.model, ...this.fallbackModels].slice(0, MAX_MODELS)
-      : undefined;
+    const modelsChain = this.modelsChain;
 
     for (let step = 0; step < this.maxSteps; step++) {
       if (signal?.aborted) return messages;
