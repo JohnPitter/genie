@@ -11,6 +11,36 @@ import { rsiLabel, macdSignal, bollingerPosition } from './indicators.ts';
 import type { Logger } from 'pino';
 
 const ANALYSIS_TIMEOUT_MS = 45_000;
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
+const MAX_MODELS = 3;
+
+/** Same emergency list used by QueryLoop — garante resiliência quando o usuário
+ * configurou só o OPENROUTER_MODEL primário sem fallbacks. */
+const EMERGENCY_FREE_FALLBACKS = [
+  'openai/gpt-oss-120b:free',
+  'openai/gpt-oss-20b:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free',
+];
+
+function buildModelsChain(model: string, fallback?: string): string[] | undefined {
+  const configured = (fallback ?? '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  if (configured.length > 0) {
+    return [model, ...configured].slice(0, MAX_MODELS);
+  }
+  if (model.endsWith(':free')) {
+    const auto = EMERGENCY_FREE_FALLBACKS.filter(m => m !== model);
+    return [model, ...auto].slice(0, MAX_MODELS);
+  }
+  return undefined;
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 const SYSTEM_PROMPT = `Você é um analista técnico e fundamentalista especializado no mercado brasileiro (B3). Analise os dados fornecidos e gere uma avaliação profissional estruturada em JSON.
 
@@ -91,10 +121,12 @@ export async function analyseStock(
   apiKey: string,
   model: string,
   log: Logger,
+  modelFallback?: string,
 ): Promise<AIAnalysis> {
   const userPrompt = buildPrompt(ticker, name, price, changePct, indicators, fundamentals, newsSnippets);
 
-  const body = JSON.stringify({
+  const models = buildModelsChain(model, modelFallback);
+  const payload: Record<string, unknown> = {
     model,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -103,32 +135,56 @@ export async function analyseStock(
     max_tokens: 600,
     temperature: 0.2,
     stream: false,
-  });
+  };
+  if (models) payload.models = models;
+  const body = JSON.stringify(payload);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
+  const attempts = 1 + RETRY_DELAYS_MS.length;
+  let lastErr: Error | null = null;
+  let resp: Response | null = null;
 
-  let resp: Response;
-  try {
-    resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/joaopedro/genie',
-        'X-Title': 'Genie',
-        'Accept': 'application/json',
-      },
-      body,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timer);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/joaopedro/genie',
+          'X-Title': 'Genie',
+          'Accept': 'application/json',
+        },
+        body,
+        signal: controller.signal,
+      });
+
+      if (r.status === 429 || r.status >= 500) {
+        const preview = await r.text().catch(() => '');
+        lastErr = new Error(`analyst: LLM returned HTTP ${r.status}: ${preview.slice(0, 200)}`);
+        log.warn({ ticker, attempt: attempt + 1, status: r.status }, 'analyst: transient error, will retry');
+      } else if (!r.ok) {
+        const err = await r.text().catch(() => '');
+        throw new Error(`analyst: LLM returned HTTP ${r.status}: ${err.slice(0, 200)}`);
+      } else {
+        resp = r;
+        break;
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+      log.warn({ ticker, attempt: attempt + 1, err: lastErr.message }, 'analyst: fetch error, will retry');
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (attempt < RETRY_DELAYS_MS.length) {
+      await sleep(RETRY_DELAYS_MS[attempt]!);
+    }
   }
 
-  if (!resp.ok) {
-    const err = await resp.text().catch(() => '');
-    throw new Error(`analyst: LLM returned HTTP ${resp.status}: ${err.slice(0, 200)}`);
+  if (!resp) {
+    throw lastErr ?? new Error('analyst: all attempts failed');
   }
 
   const data = (await resp.json()) as { choices?: Array<{ message: { content: string } }> };

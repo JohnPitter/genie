@@ -34,6 +34,7 @@ export async function registerAnalysisRoutes(app: FastifyInstance, deps: AppDeps
       const config = getConfig();
       const apiKey = config.OPENROUTER_API_KEY;
       const model = config.OPENROUTER_MODEL;
+      const modelFallback = config.OPENROUTER_MODEL_FALLBACK;
 
       try {
         // 1. Fetch historical OHLCV (90 days)
@@ -79,6 +80,7 @@ export async function registerAnalysisRoutes(app: FastifyInstance, deps: AppDeps
           apiKey,
           model,
           deps.log,
+          modelFallback,
         );
 
         // Limit history to last 60 points for the sparkline chart
