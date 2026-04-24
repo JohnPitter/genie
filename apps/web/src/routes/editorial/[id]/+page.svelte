@@ -103,8 +103,10 @@
     .editorial-page__aside { position: static; }
   }
 
-  @media (max-width: 680px) {
-    .editorial-page { padding: 16px 16px 48px; }
-    .editorial-page__sections { grid-template-columns: 1fr; }
+  @media (max-width: 768px) {
+    .editorial-page { padding: 12px 14px 48px; }
+    .editorial-page__layout { gap: 18px; }
+    .editorial-page__main { gap: 16px; }
+    .editorial-page__sections { grid-template-columns: 1fr; gap: 14px; }
   }
 </style>

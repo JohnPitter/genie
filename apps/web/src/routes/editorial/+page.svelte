@@ -133,8 +133,12 @@
     .editorial-page__aside { position: static; }
   }
 
-  @media (max-width: 680px) {
-    .editorial-page { padding: 20px 16px 48px; }
-    .editorial-page__sections { grid-template-columns: 1fr; }
+  @media (max-width: 768px) {
+    /* Mobile: o MainLayout reserva 56px no topo para o hamburger fixo,
+       mas precisamos dar respiro adicional para o header não colar nele. */
+    .editorial-page { padding: 16px 14px 48px; gap: 16px; }
+    .editorial-page__layout { gap: 18px; }
+    .editorial-page__main { gap: 16px; }
+    .editorial-page__sections { grid-template-columns: 1fr; gap: 14px; }
   }
 </style>
