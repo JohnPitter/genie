@@ -396,7 +396,7 @@
     padding: 10px 0;
     color: var(--text-primary);
     font-family: var(--font-technical);
-    font-size: var(--text-caption);
+    font-size: 16px;
     min-width: 0;
   }
 

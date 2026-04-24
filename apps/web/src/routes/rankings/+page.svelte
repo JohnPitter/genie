@@ -511,7 +511,7 @@
     border: none;
     outline: none;
     font-family: var(--font-technical);
-    font-size: var(--text-caption);
+    font-size: 16px;
     color: var(--text-primary);
     letter-spacing: 0.02em;
   }
@@ -520,7 +520,7 @@
     color: var(--text-muted);
     font-family: var(--font-body);
     letter-spacing: 0;
-    font-size: var(--text-caption);
+    font-size: 16px;
   }
 
   .search-box__clear {

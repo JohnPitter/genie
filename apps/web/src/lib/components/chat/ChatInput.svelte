@@ -132,7 +132,7 @@
     resize: none;
     padding: var(--space-lg) var(--space-xl);
     font-family: var(--font-body);
-    font-size: var(--text-caption);
+    font-size: 16px;
     color: var(--text-primary);
     line-height: 22px;
     overflow-y: hidden;

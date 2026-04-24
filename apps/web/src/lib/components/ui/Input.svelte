@@ -116,7 +116,7 @@
     border-radius: var(--radius-md);
     padding: 14px 16px;
     font-family: var(--font-body);
-    font-size: var(--text-caption);
+    font-size: 16px;
     color: var(--text-primary);
     transition:
       border-color var(--dur-fast) var(--ease-standard),

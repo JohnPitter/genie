@@ -454,7 +454,7 @@
     border-radius: var(--radius-md);
     color: var(--text-primary);
     font-family: var(--font-technical);
-    font-size: 15px;
+    font-size: 16px;
     outline: none;
     transition: border-color var(--dur-fast) var(--ease-standard);
   }
