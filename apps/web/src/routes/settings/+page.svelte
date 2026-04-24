@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Database, Cpu, Clock, Key } from 'lucide-svelte';
+  import { ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Database, Cpu, Clock, Key, Newspaper } from 'lucide-svelte';
   import { apiClient } from '$lib/api/client';
 
   const SESSION_TOKEN_KEY = 'genie_admin_token';
@@ -32,6 +32,10 @@
 
   let predJobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
   let predJobMsg = '';
+
+  let editorialJobStatus: 'idle' | 'running' | 'done' | 'error' = 'idle';
+  let editorialJobMsg = '';
+  let editorialSlot: '08' | '12' | '16' | '20' = '12';
 
   onMount(async () => {
     const stored = sessionStorage.getItem(SESSION_TOKEN_KEY);
@@ -123,6 +127,20 @@
       predJobMsg = err instanceof Error ? err.message : 'Erro ao iniciar screener';
     }
     setTimeout(() => { predJobStatus = 'idle'; predJobMsg = ''; }, 8000);
+  }
+
+  async function triggerEditorialJob() {
+    editorialJobStatus = 'running';
+    editorialJobMsg = '';
+    try {
+      await apiClient.triggerEditorialRefresh(adminToken, editorialSlot);
+      editorialJobStatus = 'done';
+      editorialJobMsg = `Edição das ${editorialSlot}h iniciada em background.`;
+    } catch (err) {
+      editorialJobStatus = 'error';
+      editorialJobMsg = err instanceof Error ? err.message : 'Erro ao iniciar editorial';
+    }
+    setTimeout(() => { editorialJobStatus = 'idle'; editorialJobMsg = ''; }, 6000);
   }
 </script>
 
@@ -363,6 +381,54 @@
 
       {#if predJobMsg}
         <p class="job-msg" class:job-msg--error={predJobStatus === 'error'}>{predJobMsg}</p>
+      {/if}
+
+      <!-- Editorial -->
+      <div class="job-row">
+        <div class="job-row__info">
+          <div class="job-row__icon"><Newspaper size={18} /></div>
+          <div>
+            <span class="job-row__name">Gerar editorial</span>
+            <span class="job-row__desc">Produz uma edição do boletim "Por dentro das notícias" para o slot escolhido.</span>
+          </div>
+        </div>
+
+        <div class="job-row__actions">
+          <select
+            class="slot-select"
+            bind:value={editorialSlot}
+            disabled={editorialJobStatus === 'running'}
+            aria-label="Slot do editorial"
+          >
+            <option value="08">08h — Manhã</option>
+            <option value="12">12h — Meio-dia</option>
+            <option value="16">16h — Tarde</option>
+            <option value="20">20h — Fechamento</option>
+          </select>
+
+          <button
+            class="job-btn"
+            class:job-btn--running={editorialJobStatus === 'running'}
+            class:job-btn--done={editorialJobStatus === 'done'}
+            class:job-btn--error={editorialJobStatus === 'error'}
+            on:click={triggerEditorialJob}
+            disabled={editorialJobStatus === 'running'}
+          >
+            {#if editorialJobStatus === 'running'}
+              <RefreshCw size={14} class="spin" /> Gerando…
+            {:else if editorialJobStatus === 'done'}
+              <CheckCircle size={14} /> Iniciado
+            {:else if editorialJobStatus === 'error'}
+              <AlertCircle size={14} /> Erro
+            {:else}
+              Executar agora
+            {/if}
+          </button>
+        </div>
+      </div>
+
+      {#if editorialJobMsg}
+        <p class="job-msg" class:job-msg--error={editorialJobStatus === 'error'}>{editorialJobMsg}</p>
       {/if}
     </section>
 
@@ -753,6 +819,35 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+  }
+
+  .job-row__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+  }
+
+  .slot-select {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: var(--font-technical);
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .slot-select:focus {
+    border-color: var(--border-interactive);
+  }
+
+  .slot-select:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
 
   .job-row__icon {

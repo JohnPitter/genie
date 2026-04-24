@@ -184,6 +184,16 @@ export class ApiClient {
     );
   }
 
+  /** Dispara geração manual de uma edição do editorial para o slot especificado. */
+  triggerEditorialRefresh(adminToken: string, slot: '08' | '12' | '16' | '20'): Promise<{ status: string; slot: string }> {
+    return this.requestWithHeaders<{ status: string; slot: string }>(
+      'POST',
+      '/api/admin/jobs/editorial/run',
+      { slot },
+      { 'X-Admin-Token': adminToken },
+    );
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private requestWithHeaders<T>(
