@@ -1,6 +1,7 @@
 import type {
   Article, Quote, Fundamentals, Favorite, FavoriteEnriched,
   StockAnalysis, PredictionsResponse, PredictionItem,
+  Editorial, EditorialSummary,
 } from '@genie/shared';
 
 // ── ApiError ─────────────────────────────────────────────────────────────────
@@ -121,6 +122,22 @@ export class ApiClient {
    */
   getPrediction(ticker: string): Promise<PredictionItem> {
     return this.request<PredictionItem>('GET', `/api/b3/predictions/${encodeURIComponent(ticker)}`);
+  }
+
+  /** Última edição do editorial financeiro (gerado 4x/dia BRT). */
+  getLatestEditorial(): Promise<Editorial> {
+    return this.request<Editorial>('GET', '/api/editorials/latest');
+  }
+
+  /** Edição arquivada por id. */
+  getEditorial(id: number): Promise<Editorial> {
+    return this.request<Editorial>('GET', `/api/editorials/${id}`);
+  }
+
+  /** Lista resumida de edições anteriores (default 14, máx 30). */
+  listEditorials(limit = 14): Promise<EditorialSummary[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    return this.request<EditorialSummary[]>('GET', `/api/editorials?${params}`);
   }
 
   /** Validates the admin token. Returns true if the token grants access, false otherwise. */

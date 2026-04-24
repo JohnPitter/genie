@@ -23,7 +23,10 @@ import { GoogleNewsSearcher } from './news/google_news.ts';
 import { Scheduler } from './jobs/scheduler.ts';
 import { registerJobs } from './jobs/registrar.ts';
 import { DailyFavoritesJob } from './jobs/daily_favorites.ts';
+import { NewsRefreshJob } from './jobs/news_refresh.ts';
 import { PredictionsRefreshJob } from './jobs/predictions_refresh.ts';
+import { EditorialRefreshJob, lastPassedSlot } from './jobs/editorial_refresh.ts';
+import { EditorialService } from './editorial/service.ts';
 import { buildApp } from './server/app.ts';
 
 const config = getConfig();
@@ -82,10 +85,14 @@ log.info(
 const googleNews = new GoogleNewsSearcher(log);
 const newsSvc = new NewsService(db, googleNews, log);
 
-// Job scheduler + manually-runnable daily job
+// Editorial service (read-only access to news_editorials)
+const editorialSvc = new EditorialService(db, log);
+
+// Job scheduler + manually-runnable jobs
 const sched = new Scheduler(log);
 registerJobs(sched, { db, newsSvc, b3: cascade, log });
 const dailyJob = new DailyFavoritesJob(db, newsSvc, log);
+const editorialJob = new EditorialRefreshJob(db, log);
 
 // HTTP server
 const app = await buildApp({
@@ -95,18 +102,21 @@ const app = await buildApp({
   newsSvc,
   loop,
   dailyJob,
+  editorialSvc,
+  editorialJob,
   model: config.OPENROUTER_MODEL,
   ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),
 });
 await app.listen({ port: config.PORT, host: '0.0.0.0' });
 log.info({ port: config.PORT }, 'server listening');
 
-// ── Bootstrap: se a base de predições está vazia (primeiro deploy ou DB
-//    novo), dispara o screener em background para que /predicoes tenha
-//    dados logo de cara, sem esperar o cron das 10:15.
+// ── Bootstrap: dispara jobs em background quando tabelas críticas estão vazias
+//    (primeiro deploy ou DB novo) para que /predicoes, / e /editorial sempre
+//    tenham conteúdo no primeiro acesso, sem esperar o próximo cron.
 //    Delay de 5s para não atrasar o startup + dar tempo de os logs
 //    aparecerem no dashboard.
-function bootstrapIfEmpty(): void {
+async function bootstrapIfEmpty(): Promise<void> {
+  // Predictions
   try {
     const row = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM predictions').get();
     if (!row || row.count === 0) {
@@ -121,9 +131,57 @@ function bootstrapIfEmpty(): void {
   } catch (err) {
     log.warn({ err }, 'bootstrap: predictions check failed (non-fatal)');
   }
+
+  // News + Editorial — encadeados: editorial precisa de notícias no DB para ter
+  // o que analisar. Se ambos vazios, news roda primeiro e o editorial aguarda.
+  let newsEmpty = false;
+  let editorialEmpty = false;
+  try {
+    const n = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM news_articles').get();
+    newsEmpty = !n || n.count === 0;
+    const e = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM news_editorials').get();
+    editorialEmpty = !e || e.count === 0;
+  } catch (err) {
+    log.warn({ err }, 'bootstrap: news/editorial check failed (non-fatal)');
+    return;
+  }
+
+  if (!newsEmpty && !editorialEmpty) {
+    log.debug('bootstrap: news + editorial already populated, skipping');
+    return;
+  }
+
+  setTimeout(() => {
+    void runNewsAndEditorialBootstrap(newsEmpty, editorialEmpty);
+  }, 5000);
 }
 
-bootstrapIfEmpty();
+async function runNewsAndEditorialBootstrap(newsEmpty: boolean, editorialEmpty: boolean): Promise<void> {
+  if (newsEmpty) {
+    log.info('bootstrap: news_articles is empty, running news-refresh job');
+    try {
+      const newsJob = new NewsRefreshJob(db, newsSvc, cascade, log);
+      await newsJob.run();
+      log.info('bootstrap: news-refresh complete');
+    } catch (err) {
+      log.error({ err }, 'bootstrap: news-refresh failed');
+      // segue para tentar editorial mesmo assim — pode haver dados parciais
+    }
+  }
+
+  if (editorialEmpty) {
+    const slot = lastPassedSlot();
+    log.info({ slot }, 'bootstrap: news_editorials is empty, generating editorial for last passed slot');
+    try {
+      await editorialJob.runForSlot(slot);
+      log.info({ slot }, 'bootstrap: editorial generation complete');
+    } catch (err) {
+      log.error({ err, slot }, 'bootstrap: editorial generation failed');
+    }
+  }
+}
+
+void bootstrapIfEmpty();
 
 // Graceful shutdown
 function shutdown(): void {

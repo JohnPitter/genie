@@ -196,6 +196,41 @@ export interface PredictionsResponse {
   message?: string;
 }
 
+// ── Editorial (Por Dentro das Notícias) ──────────────────────────────────────
+
+export type EditorialSlot = '08' | '12' | '16' | '20';
+
+export interface EditorialSection {
+  category: Category;
+  title: string;
+  body: string;
+  highlightTickers: string[];
+  sourceArticleIds: number[];
+}
+
+export interface Editorial {
+  id: number;
+  slot: EditorialSlot;
+  editionDate: string;     // YYYY-MM-DD (BRT)
+  periodStart: string;     // ISO 8601 UTC
+  periodEnd: string;       // ISO 8601 UTC
+  leadTitle: string;
+  leadBody: string;
+  sections: EditorialSection[];
+  modelUsed: string | null;
+  generatedAt: string;     // ISO 8601 UTC
+  /** Articles referenced across all sections — joined by service for UI convenience. */
+  sourceArticles?: Article[];
+}
+
+export interface EditorialSummary {
+  id: number;
+  slot: EditorialSlot;
+  editionDate: string;
+  leadTitle: string;
+  generatedAt: string;
+}
+
 // ── SSE streaming events ─────────────────────────────────────────────────────
 
 export interface TokenUsage {

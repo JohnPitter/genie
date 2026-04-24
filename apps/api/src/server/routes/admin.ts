@@ -1,11 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import type { AppDeps } from '../app.ts';
 import type { DailyFavoritesJob } from '../../jobs/daily_favorites.ts';
+import type { EditorialRefreshJob } from '../../jobs/editorial_refresh.ts';
+import type { EditorialSlot } from '../../editorial/types.ts';
 
 export interface AdminDeps extends AppDeps {
   dailyJob?: DailyFavoritesJob;
+  editorialJob?: EditorialRefreshJob;
   adminToken?: string;
 }
+
+const VALID_SLOTS = new Set(['08', '12', '16', '20']);
 
 export async function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps): Promise<void> {
   // Token guard
@@ -42,5 +47,19 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps)
     });
 
     return reply.status(202).send({ status: 'started' });
+  });
+
+  app.post<{ Body: { slot?: string } }>('/api/admin/jobs/editorial/run', async (req, reply) => {
+    if (!deps.editorialJob) {
+      return reply.status(503).send({ error: 'editorial job not available' });
+    }
+    const slot = (req.body?.slot ?? '').trim();
+    if (!slot || !VALID_SLOTS.has(slot)) {
+      return reply.status(400).send({ error: 'slot must be 08, 12, 16 or 20' });
+    }
+    void deps.editorialJob.runForSlot(slot as EditorialSlot).catch(err => {
+      deps.log.error({ err, slot }, 'admin: editorial job failed');
+    });
+    return reply.status(202).send({ status: 'started', slot });
   });
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { House, Star, TrendingUp, Sparkles } from 'lucide-svelte';
+  import { House, Star, TrendingUp, Sparkles, Newspaper } from 'lucide-svelte';
   import { page } from '$app/stores';
 
   export let collapsed = false;
@@ -8,6 +8,7 @@
     { href: '/', label: 'Início', icon: House },
     { href: '/predicoes', label: 'Predições IA', icon: Sparkles },
     { href: '/favorites', label: 'Favoritos', icon: Star },
+    { href: '/editorial', label: 'Editorial', icon: Newspaper },
     { href: '/rankings', label: 'Rankings', icon: TrendingUp },
   ];
 
@@ -29,7 +30,7 @@
   <!-- Navigation -->
   <nav class="sidebar__nav">
     {#each navItems as item}
-      {@const isActive = currentPath === item.href}
+      {@const isActive = item.href === '/' ? currentPath === '/' : currentPath.startsWith(item.href)}
       <a
         href={item.href}
         class="nav-item"

@@ -13,8 +13,15 @@ export class Scheduler {
 
   constructor(private readonly log: Logger) {}
 
-  schedule(spec: string, name: string, fn: (signal: AbortSignal) => Promise<void>): void {
-    const cron = new Cron(spec, { protect: true }, async () => {
+  schedule(
+    spec: string,
+    name: string,
+    fn: (signal: AbortSignal) => Promise<void>,
+    opts: { timezone?: string } = {},
+  ): void {
+    const cronOpts: { protect: boolean; timezone?: string } = { protect: true };
+    if (opts.timezone) cronOpts.timezone = opts.timezone;
+    const cron = new Cron(spec, cronOpts, async () => {
       if (this.running.has(name)) {
         this.log.warn({ job: name }, 'job already running, skipping');
         return;

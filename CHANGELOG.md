@@ -6,6 +6,94 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.1.0] - 2026-04-24
+
+### Fase 15: Por dentro das notícias (editorial financeiro com IA)
+
+#### Resumo
+
+Nova página `/editorial` com um boletim financeiro brasileiro investigativo, gerado automaticamente quatro vezes ao dia (08h, 12h, 16h e 20h BRT) a partir das notícias coletadas pela rotina horária. Cada edição traz um lead síntese, seções investigativas por categoria com fontes citadas, tickers em destaque e um arquivo navegável das edições anteriores. Resiliência: se a geração de uma edição falhar, a edição anterior permanece acessível — a UI sempre exibe a última edição válida.
+
+#### Plano de design
+
+`docs/plans/por-dentro-das-noticias.md` — escopo, decisões de arquitetura, snippets-chave e armadilhas (fuso BRT, validação de IDs alucinados pelo LLM, idempotência por `UNIQUE(edition_date, slot)`).
+
+#### Backend (`apps/api/src/`)
+
+**Novos arquivos**
+
+- **`store/migrations/004_news_editorials.sql`** — tabela `news_editorials` (id, slot, edition_date, period_start/end, lead_title/body, sections_json, article_ids_json, model_used, tokens_used, generated_at) com `UNIQUE(edition_date, slot)`
+- **`editorial/types.ts`** — `EditorialSlot`, `EditorialSection`, `Editorial`, `EditorialSummary`, `EditorialArticleRef` (locais ao módulo, sincronizados com `@genie/shared`)
+- **`editorial/store.ts`** — `saveEditorial` (upsert), `getLatestEditorial`, `getEditorialById`, `listEditorialSummaries`, `fetchArticlesInWindow`, `fetchArticlesByIds`
+- **`editorial/prompt.ts`** — `SYSTEM_PROMPT` editorial-chefe + `buildEditorialPrompt` (agrupa por categoria, max 12 manchetes/categoria, especifica formato JSON)
+- **`editorial/generator.ts`** — `generateEditorial` (chamada única OpenRouter com `buildModelsChain` para fallback), `parseEditorialResponse` (extrai JSON de markdown wrapper, valida categorias, filtra IDs órfãos, normaliza tickers maiúsculos)
+- **`editorial/service.ts`** — `EditorialService` (latest, byId, listSummaries) com enriquecimento automático de `sourceArticles` por meio de single-query lookup
+- **`jobs/editorial_refresh.ts`** — `EditorialRefreshJob` com janela dinâmica por slot (manhã cobre 12h overnight, demais cobrem 4h), `runForSlot()` para disparo manual, formatação de `editionDate` em fuso BRT
+- **`server/routes/editorials.ts`** — `GET /api/editorials` (lista paginada), `GET /api/editorials/latest`, `GET /api/editorials/:id` (cache HTTP 60-300s)
+
+**Arquivos modificados**
+
+- **`store/db.ts`** — adicionada `004_news_editorials.sql` à lista de migrations
+- **`jobs/scheduler.ts`** — `schedule()` aceita opção `{ timezone }` (backward-compatible) para que o cron BRT seja interpretado no fuso correto independente do servidor
+- **`jobs/registrar.ts`** — registra `editorial-refresh` com `EDITORIAL_SPEC = '0 8,12,16,20 * * *'` em `America/Sao_Paulo`
+- **`server/app.ts`** — `AppDeps` aceita `editorialSvc` e `editorialJob`; rota registrada
+- **`server/routes/admin.ts`** — `POST /api/admin/jobs/editorial/run` com body `{ slot }` para disparo manual de qualquer slot (08/12/16/20)
+- **`main.ts`** — instancia `EditorialService` e `EditorialRefreshJob` no boot e injeta no app
+
+#### Frontend (`apps/web/src/`)
+
+**Novos arquivos**
+
+- **`lib/components/editorial/EditorialHeader.svelte`** — cabeçalho da edição (slot label + data formatada + horário BRT + countdown próxima edição); modo `isLive=false` para edições arquivadas
+- **`lib/components/editorial/EditorialLead.svelte`** — bloco lead em destaque (gradiente lilac sutil, accent bar, tipografia display 32px)
+- **`lib/components/editorial/EditorialSection.svelte`** — card por categoria com emoji, título, body investigativo, badges douradas para tickers (com link `/asset/:ticker`), lista de fontes citadas (clica e abre URL externa); cor da accent bar varia por categoria
+- **`lib/components/editorial/EditorialArchive.svelte`** — sidebar sticky com até 14 edições anteriores; destaca edição atual via `currentId`
+- **`routes/editorial/+page.ts`** + **`+page.svelte`** — loader SSR via `Promise.allSettled` (latest + archive em paralelo); empty state amigável quando 404; layout grid 2 cols + aside 320px
+- **`routes/editorial/[id]/+page.ts`** + **`+page.svelte`** — edição arquivada com `error(404)` se id inválido/inexistente; link "voltar à edição atual"
+
+**Arquivos modificados**
+
+- **`lib/api/client.ts`** — métodos `getLatestEditorial`, `getEditorial(id)`, `listEditorials(limit)`
+- **`lib/components/layout/Sidebar.svelte`** — item "Editorial" (ícone `Newspaper`) entre Favoritos e Rankings; lógica `isActive` agora usa `startsWith` para destacar a aba quando estamos em `/editorial/:id`
+
+#### Tests
+
+- **`apps/api/tests/editorial/generator.test.ts`** — 9 casos cobrindo parser (input vazio, JSON malformado, sem leadTitle, categorias inválidas, IDs órfãos, markdown wrapper, caps de tamanho)
+- **`apps/api/tests/editorial/store.test.ts`** — 7 casos cobrindo round-trip, upsert por `(edition_date, slot)`, ordenação `DESC, id DESC`, fetch em janela e por IDs
+
+Total: 249 unit tests passando (api) + 437 testes passando (web).
+
+#### Resiliência
+
+- Falha total do LLM (apertar 3 retries em todos os modelos da chain) → job loga error e **não insere** linha; UI continua exibindo última edição válida via `getLatestEditorial`
+- Janela vazia (zero artigos no período) → job loga warn e pula geração
+- LLM alucina `sourceArticleIds` inexistentes → filtro descarta antes do save (única lookup-set construído a partir dos `articles` enviados ao prompt)
+- Custo estimado: ~$0.01/dia (4 chamadas × ~2k tokens em `claude-3.5-haiku`)
+
+#### Bootstrap automático
+
+- `main.ts` foi estendido para garantir que `/`, `/predicoes` e `/editorial` sempre tenham conteúdo no primeiro acesso após um deploy/DB novo:
+  - `news_articles` vazio → `NewsRefreshJob` executa em background (5s após boot)
+  - `news_editorials` vazio → após o news terminar, gera editorial para o **último slot BRT já passado** (`lastPassedSlot()` em `jobs/editorial_refresh.ts`): às 09h escolhe `'08'`, às 13h escolhe `'12'`, antes das 08h escolhe `'20'` da véspera
+  - Encadeamento via `await`: se ambas tabelas estão vazias, news roda primeiro (popula a janela) e o editorial só dispara depois — evita gerar editorial sobre janela vazia
+  - Falhas no bootstrap são logadas mas não derrubam o servidor
+
+#### Como testar
+
+```bash
+# disparo manual (admin token necessário)
+curl -X POST http://localhost:5858/api/admin/jobs/editorial/run \
+  -H 'X-Admin-Token: ...' -H 'Content-Type: application/json' \
+  -d '{"slot": "16"}'
+
+# verificar
+curl http://localhost:5858/api/editorials/latest
+```
+
+UI: acesse `/editorial`. Empty state aparece se nenhuma edição existe ainda; o cron começa a popular a partir do próximo slot BRT.
+
+---
+
 ## [2.0.0] - 2026-04-22
 
 ### Fase 14: Migração do backend Go para TypeScript (monorepo 100% TS)

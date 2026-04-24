@@ -7,6 +7,8 @@ import type { Source } from '../b3/source.ts';
 import type { NewsService } from '../news/service.ts';
 import type { QueryLoop } from '../agent/loop.ts';
 import type { DailyFavoritesJob } from '../jobs/daily_favorites.ts';
+import type { EditorialRefreshJob } from '../jobs/editorial_refresh.ts';
+import type { EditorialService } from '../editorial/service.ts';
 import type { Logger } from 'pino';
 import { registerChatRoutes } from './routes/chat.ts';
 import { registerB3Routes } from './routes/b3.ts';
@@ -15,6 +17,7 @@ import { registerFavoritesRoutes } from './routes/favorites.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAnalysisRoutes } from './routes/analysis.ts';
 import { registerPredictionsRoutes } from './routes/predictions.ts';
+import { registerEditorialRoutes } from './routes/editorials.ts';
 
 export const VERSION = '0.2.0';
 
@@ -25,6 +28,8 @@ export interface AppDeps {
   newsSvc?: NewsService;
   loop?: QueryLoop;
   dailyJob?: DailyFavoritesJob;
+  editorialSvc?: EditorialService;
+  editorialJob?: EditorialRefreshJob;
   adminToken?: string;
   model?: string;
 }
@@ -79,6 +84,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerAdminRoutes(app, deps);
   await registerAnalysisRoutes(app, deps);
   await registerPredictionsRoutes(app, deps);
+  await registerEditorialRoutes(app, deps);
 
   return app;
 }
