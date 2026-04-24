@@ -117,7 +117,6 @@ export async function analyseStock(
 
   const attempts = 1 + RETRY_DELAYS_MS.length;
   let lastErr: Error | null = null;
-  let resp: Response | null = null;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
@@ -142,10 +141,20 @@ export async function analyseStock(
         log.warn({ ticker, attempt: attempt + 1, status: r.status }, 'analyst: transient error, will retry');
       } else if (!r.ok) {
         const err = await r.text().catch(() => '');
-        throw new Error(`analyst: LLM returned HTTP ${r.status}: ${err.slice(0, 200)}`);
-      } else {
-        resp = r;
+        lastErr = new Error(`analyst: LLM returned HTTP ${r.status}: ${err.slice(0, 200)}`);
         break;
+      } else {
+        const data = (await r.json().catch(() => null)) as
+          | { choices?: Array<{ message: { content: string } }> }
+          | null;
+        const raw = data?.choices?.[0]?.message?.content ?? '';
+        const parsed = tryParseAnalysis(raw);
+        if (parsed) {
+          log.info({ ticker, sinal: parsed.sinal, confianca: parsed.confianca }, 'analyst: analysis complete');
+          return parsed;
+        }
+        lastErr = new Error('analyst: LLM returned empty/invalid JSON');
+        log.warn({ ticker, attempt: attempt + 1, rawPreview: raw.slice(0, 200) }, 'analyst: invalid LLM response, will retry');
       }
     } catch (err) {
       lastErr = err instanceof Error ? err : new Error(String(err));
@@ -159,32 +168,98 @@ export async function analyseStock(
     }
   }
 
-  if (!resp) {
-    throw lastErr ?? new Error('analyst: all attempts failed');
-  }
+  // All attempts failed — return deterministic fallback based on indicators
+  // so the user always gets some useful analysis instead of an error.
+  log.warn(
+    { ticker, err: lastErr?.message },
+    'analyst: all LLM attempts failed, returning deterministic fallback',
+  );
+  return buildFallbackAnalysis(price, indicators, fundamentals);
+}
 
-  const data = (await resp.json()) as { choices?: Array<{ message: { content: string } }> };
-  const raw = data.choices?.[0]?.message?.content ?? '';
-
-  // Extract JSON even if the model wraps it in markdown
+/** Try to extract + validate a JSON analysis from the LLM raw response. */
+function tryParseAnalysis(raw: string): AIAnalysis | null {
+  if (!raw || !raw.trim()) return null;
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    log.warn({ ticker, raw: raw.slice(0, 300) }, 'analyst: LLM did not return valid JSON');
-    throw new Error('analyst: could not extract JSON from LLM response');
+  if (!jsonMatch) return null;
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as AIAnalysis;
+    if (!['compra', 'venda', 'neutro'].includes(parsed.sinal)) parsed.sinal = 'neutro';
+    if (!['baixa', 'media', 'alta'].includes(parsed.confianca)) parsed.confianca = 'baixa';
+    if (!Array.isArray(parsed.positivos)) parsed.positivos = [];
+    if (!Array.isArray(parsed.negativos)) parsed.negativos = [];
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Deterministic analysis baseada apenas nos indicadores — usada quando o LLM
+ *  está indisponível. Transparente: confiança sempre 'baixa' para sinalizar
+ *  que não houve análise IA real. */
+function buildFallbackAnalysis(
+  price: number,
+  ind: TechnicalIndicators,
+  fund: Fundamentals | null,
+): AIAnalysis {
+  const positivos: string[] = [];
+  const negativos: string[] = [];
+
+  // RSI
+  if (ind.rsi14 != null) {
+    if (ind.rsi14 < 30) positivos.push(`RSI em ${ind.rsi14.toFixed(0)} — zona de sobrevendido, possível reversão`);
+    else if (ind.rsi14 > 70) negativos.push(`RSI em ${ind.rsi14.toFixed(0)} — zona de sobrecomprado`);
   }
 
-  const analysis = JSON.parse(jsonMatch[0]) as AIAnalysis;
+  // Médias móveis
+  if (ind.sma20 && price > ind.sma20) positivos.push('Preço acima da média móvel de 20 dias (tendência curta positiva)');
+  else if (ind.sma20 && price < ind.sma20) negativos.push('Preço abaixo da média móvel de 20 dias');
 
-  // Basic validation
-  if (!['compra', 'venda', 'neutro'].includes(analysis.sinal)) {
-    analysis.sinal = 'neutro';
-  }
-  if (!['baixa', 'media', 'alta'].includes(analysis.confianca)) {
-    analysis.confianca = 'baixa';
-  }
-  if (!Array.isArray(analysis.positivos)) analysis.positivos = [];
-  if (!Array.isArray(analysis.negativos)) analysis.negativos = [];
+  if (ind.sma50 && price > ind.sma50) positivos.push('Preço acima da média de 50 dias (tendência média positiva)');
+  else if (ind.sma50 && price < ind.sma50) negativos.push('Preço abaixo da média de 50 dias');
 
-  log.info({ ticker, sinal: analysis.sinal, confianca: analysis.confianca }, 'analyst: analysis complete');
-  return analysis;
+  // MACD
+  if (ind.macd) {
+    if (ind.macd.histogram > 0) positivos.push('MACD histograma positivo (momentum de alta)');
+    else negativos.push('MACD histograma negativo (momentum de baixa)');
+  }
+
+  // Fundamentos
+  if (fund?.dividendYield && fund.dividendYield > 5) {
+    positivos.push(`Dividend Yield de ${fund.dividendYield.toFixed(1)}% acima da média`);
+  }
+  if (fund?.debtToEquity && fund.debtToEquity > 2) {
+    negativos.push(`Dívida/Patrimônio alta (${fund.debtToEquity.toFixed(1)})`);
+  }
+
+  // Sinal derivado do score simples
+  const score = positivos.length - negativos.length;
+  const sinal: AIAnalysis['sinal'] = score >= 2 ? 'compra' : score <= -2 ? 'venda' : 'neutro';
+
+  const tendencia: AIAnalysis['tendencia_curto'] =
+    ind.sma20 && price > ind.sma20 ? 'alta' : ind.sma20 && price < ind.sma20 ? 'baixa' : 'lateral';
+  const tendenciaMedio: AIAnalysis['tendencia_medio'] =
+    ind.sma50 && price > ind.sma50 ? 'alta' : ind.sma50 && price < ind.sma50 ? 'baixa' : 'lateral';
+
+  // Suporte/resistência aproximados: preço ± 5% arredondado
+  const suporte = Math.round(price * 0.95 * 100) / 100;
+  const resistencia = Math.round(price * 1.05 * 100) / 100;
+
+  if (positivos.length === 0) positivos.push('Dados técnicos disponíveis para acompanhamento');
+  if (negativos.length === 0) negativos.push('Análise IA indisponível no momento — revise indicadores manualmente');
+
+  return {
+    sinal,
+    confianca: 'baixa',
+    tendencia_curto: tendencia,
+    tendencia_medio: tendenciaMedio,
+    suporte,
+    resistencia,
+    positivos: positivos.slice(0, 4),
+    negativos: negativos.slice(0, 4),
+    racional:
+      'Análise automática baseada em indicadores técnicos (IA temporariamente indisponível). ' +
+      'Considere este resultado como apoio, não como recomendação definitiva.',
+    horizonte: '1 mês',
+  };
 }
