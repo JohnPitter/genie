@@ -49,12 +49,14 @@
 
 <style>
   .editorial-page {
+    box-sizing: border-box;
     width: 100%;
     max-width: 1320px;
-    margin: 0 auto;
+    margin-inline: auto;
     padding: 24px 28px 64px;
     flex: 1;
     min-width: 0;
+    align-self: stretch;
   }
 
   .editorial-page__back {
@@ -96,7 +98,7 @@
     gap: 18px;
   }
 
-  .editorial-page__aside { position: sticky; top: 32px; }
+  .editorial-page__aside { position: sticky; top: 32px; min-width: 0; }
 
   @media (max-width: 1100px) {
     .editorial-page__layout { grid-template-columns: 1fr; }

@@ -77,6 +77,9 @@
     background: linear-gradient(160deg, #1c1d24 0%, #131419 100%);
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
   }
 
   .editorial-header::before {
@@ -120,6 +123,9 @@
     flex-wrap: wrap;
     align-items: baseline;
     gap: 10px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    min-width: 0;
   }
 
   .editorial-header__slot {
@@ -156,9 +162,10 @@
     color: rgba(232, 197, 106, 0.85);
   }
 
-  @media (max-width: 640px) {
-    .editorial-header { padding: 22px 20px 20px; }
-    .editorial-header__title { font-size: 22px; }
-    .editorial-header__date { font-size: 15px; }
+  @media (max-width: 768px) {
+    .editorial-header { padding: 18px 16px 18px; }
+    .editorial-header__title { font-size: 20px; }
+    .editorial-header__date { font-size: 14px; }
+    .editorial-header__time { font-size: 11px; }
   }
 </style>
