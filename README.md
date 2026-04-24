@@ -138,14 +138,6 @@ FIIs (tickers terminados em `11` que não são units conhecidas como SANB11, BPA
 5. **Cotações em tempo real** — badges com preço e variação % (verde/vermelho) são buscadas via `POST /api/b3/quotes/batch` após a renderização, sem bloquear a navegação
 6. **Bootstrap automático** — na primeira inicialização sem dados, roda news-refresh e depois gera o editorial para o último slot BRT passado (ex: deploy às 09h → gera edição das 08h)
 
-```bash
-# Disparar edição manualmente (requer ADMIN_TOKEN)
-curl -X POST http://localhost:5858/api/admin/jobs/editorial/run \
-  -H "X-Admin-Token: $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"slot": "12"}'
-```
-
 ### Agente de Tool-Calling
 
 O `QueryLoop` executa até 20 passos de raciocínio com contexto inteligente:
