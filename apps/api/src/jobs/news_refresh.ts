@@ -3,7 +3,11 @@ import { listFavorites } from '../store/favorites.ts';
 import type { DB } from '../store/db.ts';
 import type { NewsService } from '../news/service.ts';
 import type { Source } from '../b3/source.ts';
-import { allTickers } from '../b3/categories.ts';
+import { balancedTickers } from '../b3/categories.ts';
+
+// 4 tickers × 7 categorias = 28 — cobertura balanceada para o editorial poder
+// gerar seções de todas as categorias, vs. slice(N) que enviesa para a primeira.
+const TICKERS_PER_CATEGORY = 4;
 
 export class NewsRefreshJob {
   constructor(
@@ -17,10 +21,11 @@ export class NewsRefreshJob {
     const start = Date.now();
     this.log?.info('news-refresh job started');
 
-    // Refresh all categories
-    const { fetched, firstError } = await this.newsSvc.refreshTickers(allTickers().slice(0, 20), signal);
+    // Refresh balanced selection across all categories
+    const tickers = balancedTickers(TICKERS_PER_CATEGORY);
+    const { fetched, firstError } = await this.newsSvc.refreshTickers(tickers, signal);
     if (firstError) this.log?.error({ err: firstError }, 'news-refresh: category refresh had errors');
-    this.log?.info({ articles: fetched }, 'news-refresh: tickers done');
+    this.log?.info({ articles: fetched, tickers: tickers.length }, 'news-refresh: tickers done');
 
     if (signal?.aborted) return;
 

@@ -139,6 +139,23 @@ export function tickersFor(cat: Category): string[] {
   return TICKERS_BY_CATEGORY[cat] ?? [];
 }
 
+/**
+ * Retorna uma lista intercalada com até `perCategory` tickers de cada categoria,
+ * garantindo cobertura balanceada (vs. allTickers() que agrupa por categoria
+ * e, ao usar `slice(N)`, deixa categorias inteiras de fora).
+ *
+ * Usado no news_refresh para que o editorial tenha manchetes de TODAS as
+ * categorias e o LLM possa gerar seções diversas.
+ */
+export function balancedTickers(perCategory: number): string[] {
+  const out: string[] = [];
+  for (const cat of ALL_CATEGORIES) {
+    const tickers = TICKERS_BY_CATEGORY[cat];
+    if (tickers) out.push(...tickers.slice(0, perCategory));
+  }
+  return out;
+}
+
 export function categoryOf(ticker: string): Category | undefined {
   return REVERSE_INDEX.get(ticker.toUpperCase());
 }

@@ -10,7 +10,8 @@ REGRAS:
 - Cite tickers concretos quando relevante.
 - Use sourceArticleIds para fundamentar cada seção (mínimo 1, máximo 4 ids por seção, escolhidos da lista fornecida).
 - NUNCA invente fatos: baseie-se SÓ nas manchetes fornecidas.
-- Se uma categoria tiver poucas/nenhuma notícia, omita-a (não force seção vazia).`;
+- COBERTURA: gere uma seção para CADA categoria que tenha pelo menos 2 manchetes na entrada. Se uma categoria tem só 1 manchete ou nenhuma, omita.
+- Mesmo categorias com volume menor de notícias merecem seção própria — não consolide tudo em "Financeiro".`;
 
 const MAX_ARTICLES_PER_CATEGORY = 12;
 
