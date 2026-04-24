@@ -1,18 +1,26 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { ArrowLeft } from 'lucide-svelte';
   import EditorialHeader from '$lib/components/editorial/EditorialHeader.svelte';
   import EditorialLead from '$lib/components/editorial/EditorialLead.svelte';
   import EditorialSection from '$lib/components/editorial/EditorialSection.svelte';
   import EditorialArchive from '$lib/components/editorial/EditorialArchive.svelte';
+  import { apiClient } from '$lib/api/client';
+  import { fetchEditorialQuotes } from '$lib/editorial';
+  import type { Quote } from '@genie/shared';
   import type { PageData } from './$types';
 
   export let data: PageData;
 
   $: editorial = data.editorial;
   $: archive = data.archive;
-  $: quotes = data.quotes ?? {};
+  let quotes: Record<string, Quote> = {};
   $: sourceArticles = editorial.sourceArticles ?? [];
   $: articlesById = new Map(sourceArticles.map(a => [a.id, a]));
+
+  onMount(async () => {
+    quotes = await fetchEditorialQuotes(editorial, apiClient);
+  });
 </script>
 
 <svelte:head>

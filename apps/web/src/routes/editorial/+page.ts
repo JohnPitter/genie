@@ -1,6 +1,5 @@
 import type { PageLoad } from './$types';
 import { ApiClient } from '$lib/api/client';
-import { fetchEditorialQuotes } from '$lib/editorial';
 import type { Editorial, EditorialSummary, Quote } from '@genie/shared';
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -29,9 +28,6 @@ export const load: PageLoad = async ({ fetch }) => {
     archive = archiveResult.value;
   }
 
-  if (editorial) {
-    quotes = await fetchEditorialQuotes(editorial, client);
-  }
-
+  // quotes são carregadas em onMount na página para não bloquear a navegação
   return { editorial, archive, quotes, loadError };
 };

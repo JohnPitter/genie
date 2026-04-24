@@ -1,6 +1,5 @@
 import type { PageLoad } from './$types';
 import { ApiClient } from '$lib/api/client';
-import { fetchEditorialQuotes } from '$lib/editorial';
 import { error } from '@sveltejs/kit';
 
 export const load: PageLoad = async ({ fetch, params }) => {
@@ -23,11 +22,10 @@ export const load: PageLoad = async ({ fetch, params }) => {
   }
 
   const editorial = editorialResult.value;
-  const quotes = await fetchEditorialQuotes(editorial, client);
 
   return {
     editorial,
     archive: archiveResult.status === 'fulfilled' ? archiveResult.value : [],
-    quotes,
+    quotes: {},
   };
 };
