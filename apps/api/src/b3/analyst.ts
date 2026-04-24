@@ -101,24 +101,33 @@ export async function analyseStock(
 ): Promise<AIAnalysis> {
   const userPrompt = buildPrompt(ticker, name, price, changePct, indicators, fundamentals, newsSnippets);
 
-  const models = buildModelsChain(model, modelFallback);
-  const payload: Record<string, unknown> = {
-    model,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt },
-    ],
-    max_tokens: 600,
-    temperature: 0.2,
-    stream: false,
-  };
-  if (models) payload.models = models;
-  const body = JSON.stringify(payload);
+  // Build rotation order: a cada tentativa trocamos o modelo primário para
+  // forçar o OpenRouter a usar outro provider. O campo `models` também é
+  // rotacionado para ficar consistente com o primário atual.
+  const chain = buildModelsChain(model, modelFallback) ?? [model];
+  const rotationOrder = chain.length > 0 ? chain : [model];
 
-  const attempts = 1 + RETRY_DELAYS_MS.length;
+  const attempts = Math.max(rotationOrder.length, 1 + RETRY_DELAYS_MS.length);
   let lastErr: Error | null = null;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
+    const primary = rotationOrder[attempt % rotationOrder.length]!;
+    const fallbacksForAttempt = rotationOrder.filter(m => m !== primary);
+    const payload: Record<string, unknown> = {
+      model: primary,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 600,
+      temperature: 0.2,
+      stream: false,
+    };
+    if (fallbacksForAttempt.length > 0) {
+      payload.models = [primary, ...fallbacksForAttempt].slice(0, 3);
+    }
+    const body = JSON.stringify(payload);
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT_MS);
     try {
@@ -138,32 +147,39 @@ export async function analyseStock(
       if (r.status === 429 || r.status >= 500) {
         const preview = await r.text().catch(() => '');
         lastErr = new Error(`analyst: LLM returned HTTP ${r.status}: ${preview.slice(0, 200)}`);
-        log.warn({ ticker, attempt: attempt + 1, status: r.status }, 'analyst: transient error, will retry');
+        log.warn({ ticker, attempt: attempt + 1, primary, status: r.status }, 'analyst: transient error, will retry');
       } else if (!r.ok) {
         const err = await r.text().catch(() => '');
         lastErr = new Error(`analyst: LLM returned HTTP ${r.status}: ${err.slice(0, 200)}`);
         break;
       } else {
         const data = (await r.json().catch(() => null)) as
-          | { choices?: Array<{ message: { content: string } }> }
+          | { choices?: Array<{ message: { content: string } }>; model?: string }
           | null;
         const raw = data?.choices?.[0]?.message?.content ?? '';
+        const usedModel = data?.model ?? primary;
         const parsed = tryParseAnalysis(raw);
         if (parsed) {
-          log.info({ ticker, sinal: parsed.sinal, confianca: parsed.confianca }, 'analyst: analysis complete');
+          log.info(
+            { ticker, usedModel, sinal: parsed.sinal, confianca: parsed.confianca },
+            'analyst: analysis complete',
+          );
           return parsed;
         }
         lastErr = new Error('analyst: LLM returned empty/invalid JSON');
-        log.warn({ ticker, attempt: attempt + 1, rawPreview: raw.slice(0, 200) }, 'analyst: invalid LLM response, will retry');
+        log.warn(
+          { ticker, attempt: attempt + 1, primary, usedModel, rawPreview: raw.slice(0, 200) },
+          'analyst: invalid LLM response, will rotate model',
+        );
       }
     } catch (err) {
       lastErr = err instanceof Error ? err : new Error(String(err));
-      log.warn({ ticker, attempt: attempt + 1, err: lastErr.message }, 'analyst: fetch error, will retry');
+      log.warn({ ticker, attempt: attempt + 1, primary, err: lastErr.message }, 'analyst: fetch error, will retry');
     } finally {
       clearTimeout(timer);
     }
 
-    if (attempt < RETRY_DELAYS_MS.length) {
+    if (attempt < attempts - 1 && attempt < RETRY_DELAYS_MS.length) {
       await sleep(RETRY_DELAYS_MS[attempt]!);
     }
   }
