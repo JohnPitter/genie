@@ -24,6 +24,15 @@ interface ArticleRow {
   fetchedAt: string;
 }
 
+export function parseTickersJson(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((t): t is string => typeof t === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 function normalizeURL(u: string): string {
   const trimmed = u.trim().replace(/\/$/, '');
   try {
@@ -36,12 +45,7 @@ function normalizeURL(u: string): string {
 }
 
 function rowToArticle(row: ArticleRow): Article {
-  let tickers: string[] = [];
-  try {
-    tickers = JSON.parse(row.tickersJson) as string[];
-  } catch {
-    tickers = [];
-  }
+  const tickers = parseTickersJson(row.tickersJson);
   const article: Article = {
     id: row.id,
     url: row.url,

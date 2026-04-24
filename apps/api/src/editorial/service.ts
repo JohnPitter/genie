@@ -2,6 +2,7 @@ import type { DB } from '../store/db.ts';
 import type { Logger } from 'pino';
 import type { Editorial, EditorialSummary } from './types.ts';
 import {
+  collectArticleIds,
   fetchArticlesByIds,
   getEditorialById,
   getLatestEditorial,
@@ -30,16 +31,12 @@ export class EditorialService {
   }
 
   private enrichWithArticles(editorial: Editorial): Editorial {
-    const ids = new Set<number>();
-    for (const sec of editorial.sections) {
-      for (const id of sec.sourceArticleIds) ids.add(id);
-    }
-    if (ids.size === 0) {
+    const ids = collectArticleIds(editorial.sections);
+    if (ids.length === 0) {
       this.log.debug({ editorialId: editorial.id }, 'editorial: no source articles to enrich');
       return { ...editorial, sourceArticles: [] };
     }
-    const map = fetchArticlesByIds(this.db, [...ids]);
-    const sourceArticles = [...map.values()];
+    const sourceArticles = [...fetchArticlesByIds(this.db, ids).values()];
     return { ...editorial, sourceArticles };
   }
 }

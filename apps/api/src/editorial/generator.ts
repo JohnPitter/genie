@@ -3,6 +3,7 @@ import type { EditorialCategory, EditorialSection } from './types.ts';
 import { EDITORIAL_CATEGORIES } from './types.ts';
 import { buildModelsChain } from '../agent/llm-fallback.ts';
 import { parseTolerantJson } from '../lib/json-tolerant.ts';
+import { sleep } from '../lib/sleep.ts';
 import { buildEditorialPrompt, SYSTEM_PROMPT } from './prompt.ts';
 import type { PromptArticle } from './store.ts';
 
@@ -26,11 +27,7 @@ export interface GenerateOutput {
   tokensUsed: number | null;
 }
 
-const VALID_CATEGORIES = new Set<string>(EDITORIAL_CATEGORIES);
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const VALID_CATEGORIES = new Set<EditorialCategory>(EDITORIAL_CATEGORIES);
 
 export async function generateEditorial(input: GenerateInput): Promise<GenerateOutput | null> {
   const { articles, periodLabel, apiKey, model, modelFallback, log } = input;
@@ -42,14 +39,13 @@ export async function generateEditorial(input: GenerateInput): Promise<GenerateO
   const userPrompt = buildEditorialPrompt(articles, periodLabel);
   const validIds = new Set(articles.map(a => a.id));
   const chain = buildModelsChain(model, modelFallback) ?? [model];
-  const rotation = chain.length > 0 ? chain : [model];
-  const attempts = Math.max(rotation.length, 1 + RETRY_DELAYS_MS.length);
+  const attempts = Math.max(chain.length, 1 + RETRY_DELAYS_MS.length);
 
   let lastErr: Error | null = null;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    const primary = rotation[attempt % rotation.length]!;
-    const fallbacks = rotation.filter(m => m !== primary);
+    const primary = chain[attempt % chain.length]!;
+    const fallbacks = chain.filter(m => m !== primary);
     const payload: Record<string, unknown> = {
       model: primary,
       messages: [
@@ -146,7 +142,7 @@ export function parseEditorialResponse(
     if (!s || typeof s !== 'object') continue;
     const sec = s as Record<string, unknown>;
     const category = typeof sec.category === 'string' ? sec.category : '';
-    if (!VALID_CATEGORIES.has(category)) continue;
+    if (!VALID_CATEGORIES.has(category as EditorialCategory)) continue;
 
     const title = typeof sec.title === 'string' ? sec.title.trim() : '';
     const body = typeof sec.body === 'string' ? sec.body.trim() : '';

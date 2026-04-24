@@ -1,5 +1,6 @@
 import type { DB } from '../store/db.ts';
 import type { Editorial, EditorialArticleRef, EditorialSection, EditorialSlot, EditorialSummary } from './types.ts';
+import { parseTickersJson } from '../store/news.ts';
 
 export interface PromptArticle {
   id: number;
@@ -160,23 +161,14 @@ export function fetchArticlesInWindow(db: DB, start: Date, end: Date): PromptArt
     )
     .all(start.toISOString(), end.toISOString());
 
-  return rows.map(r => {
-    let tickers: string[] = [];
-    try {
-      const parsed = JSON.parse(r.tickersJson);
-      if (Array.isArray(parsed)) tickers = parsed.filter(t => typeof t === 'string');
-    } catch {
-      tickers = [];
-    }
-    return {
-      id: r.id,
-      title: r.title,
-      source: r.source,
-      category: r.category,
-      tickers,
-      publishedAt: r.publishedAt,
-    };
-  });
+  return rows.map(r => ({
+    id: r.id,
+    title: r.title,
+    source: r.source,
+    category: r.category,
+    tickers: parseTickersJson(r.tickersJson),
+    publishedAt: r.publishedAt,
+  }));
 }
 
 interface ArticleByIdRow {
@@ -209,22 +201,24 @@ export function fetchArticlesByIds(db: DB, ids: number[]): Map<number, Editorial
 }
 
 function rowToArticle(row: ArticleByIdRow): EditorialArticleRef {
-  let tickers: string[] = [];
-  try {
-    const parsed = JSON.parse(row.tickersJson);
-    if (Array.isArray(parsed)) tickers = parsed.filter(t => typeof t === 'string');
-  } catch {
-    tickers = [];
-  }
   return {
     id: row.id,
     url: row.url,
     title: row.title,
     source: row.source ?? '',
     ...(row.summary ? { summary: row.summary } : {}),
-    tickers,
+    tickers: parseTickersJson(row.tickersJson),
     ...(row.category ? { category: row.category } : {}),
     ...(row.publishedAt ? { publishedAt: row.publishedAt } : {}),
     fetchedAt: row.fetchedAt,
   };
+}
+
+/** Coleta e deduplica todos os article IDs referenciados pelas seções. */
+export function collectArticleIds(sections: { sourceArticleIds: number[] }[]): number[] {
+  const ids = new Set<number>();
+  for (const sec of sections) {
+    for (const id of sec.sourceArticleIds) ids.add(id);
+  }
+  return [...ids];
 }

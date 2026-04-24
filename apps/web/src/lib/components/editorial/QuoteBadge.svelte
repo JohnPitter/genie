@@ -4,17 +4,15 @@
   export let ticker: string;
   export let quote: Quote | undefined;
 
+  const brlFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
+
   $: change = quote?.changePct ?? null;
   $: price = quote?.price ?? null;
   $: positive = change !== null && change > 0;
   $: negative = change !== null && change < 0;
   $: arrow = positive ? '↑' : negative ? '↓' : '→';
-  $: formatted = change !== null
-    ? `${positive ? '+' : ''}${change.toFixed(2)}%`
-    : null;
-  $: priceFormatted = price !== null
-    ? price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 })
-    : null;
+  $: formatted = change !== null ? `${positive ? '+' : ''}${change.toFixed(2)}%` : null;
+  $: priceFormatted = price !== null ? brlFmt.format(price) : null;
 </script>
 
 <a

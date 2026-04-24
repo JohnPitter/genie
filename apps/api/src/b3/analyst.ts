@@ -10,14 +10,11 @@ import type { Fundamentals } from './types.ts';
 import { rsiLabel, macdSignal, bollingerPosition } from './indicators.ts';
 import { buildModelsChain } from '../agent/llm-fallback.ts';
 import { parseTolerantJson } from '../lib/json-tolerant.ts';
+import { sleep } from '../lib/sleep.ts';
 import type { Logger } from 'pino';
 
 const ANALYSIS_TIMEOUT_MS = 45_000;
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 const SYSTEM_PROMPT = `Você é um analista técnico e fundamentalista especializado no mercado brasileiro (B3). Analise os dados fornecidos e gere uma avaliação profissional estruturada em JSON.
 

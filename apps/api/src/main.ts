@@ -116,35 +116,33 @@ log.info({ port: config.PORT }, 'server listening');
 //    Delay de 5s para não atrasar o startup + dar tempo de os logs
 //    aparecerem no dashboard.
 async function bootstrapIfEmpty(): Promise<void> {
-  // Predictions
+  // Uma query combina as 3 contagens — evita 3 round-trips sequenciais ao SQLite binding
+  let counts: { predictions: number; news: number; editorials: number } | null = null;
   try {
-    const row = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM predictions').get();
-    if (!row || row.count === 0) {
-      log.info('bootstrap: predictions table is empty, scheduling screener in 5s');
-      setTimeout(() => {
-        const job = new PredictionsRefreshJob(db, log);
-        job.run().catch(err => log.error({ err }, 'bootstrap: predictions refresh failed'));
-      }, 5000);
-    } else {
-      log.debug({ count: row.count }, 'bootstrap: predictions table already populated, skipping');
-    }
+    counts = db.prepare<[], { predictions: number; news: number; editorials: number }>(
+      `SELECT
+        (SELECT COUNT(*) FROM predictions)     AS predictions,
+        (SELECT COUNT(*) FROM news_articles)   AS news,
+        (SELECT COUNT(*) FROM news_editorials) AS editorials`,
+    ).get() ?? null;
   } catch (err) {
-    log.warn({ err }, 'bootstrap: predictions check failed (non-fatal)');
-  }
-
-  // News + Editorial — encadeados: editorial precisa de notícias no DB para ter
-  // o que analisar. Se ambos vazios, news roda primeiro e o editorial aguarda.
-  let newsEmpty = false;
-  let editorialEmpty = false;
-  try {
-    const n = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM news_articles').get();
-    newsEmpty = !n || n.count === 0;
-    const e = db.prepare<[], { count: number }>('SELECT COUNT(*) as count FROM news_editorials').get();
-    editorialEmpty = !e || e.count === 0;
-  } catch (err) {
-    log.warn({ err }, 'bootstrap: news/editorial check failed (non-fatal)');
+    log.warn({ err }, 'bootstrap: table count check failed (non-fatal)');
     return;
   }
+  if (!counts) return;
+
+  if (counts.predictions === 0) {
+    log.info('bootstrap: predictions table is empty, scheduling screener in 5s');
+    setTimeout(() => {
+      const job = new PredictionsRefreshJob(db, log);
+      job.run().catch(err => log.error({ err }, 'bootstrap: predictions refresh failed'));
+    }, 5000);
+  } else {
+    log.debug({ count: counts.predictions }, 'bootstrap: predictions already populated, skipping');
+  }
+
+  const newsEmpty = counts.news === 0;
+  const editorialEmpty = counts.editorials === 0;
 
   if (!newsEmpty && !editorialEmpty) {
     log.debug('bootstrap: news + editorial already populated, skipping');

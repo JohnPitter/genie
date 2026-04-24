@@ -1,5 +1,6 @@
 import type { PageLoad } from './$types';
 import { ApiClient } from '$lib/api/client';
+import { fetchEditorialQuotes } from '$lib/editorial';
 import type { Editorial, EditorialSummary, Quote } from '@genie/shared';
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -28,19 +29,8 @@ export const load: PageLoad = async ({ fetch }) => {
     archive = archiveResult.value;
   }
 
-  // Busca quotes de todos os tickers em destaque do editorial
   if (editorial) {
-    const tickers = [
-      ...new Set(editorial.sections.flatMap(s => s.highlightTickers)),
-    ].slice(0, 20);
-
-    if (tickers.length > 0) {
-      try {
-        quotes = await client.batchQuotes(tickers);
-      } catch {
-        // quotes são best-effort — não falha a página
-      }
-    }
+    quotes = await fetchEditorialQuotes(editorial, client);
   }
 
   return { editorial, archive, quotes, loadError };

@@ -1,7 +1,7 @@
 import type { DB } from '../store/db.ts';
 import type { Logger } from 'pino';
 import { generateEditorial } from '../editorial/generator.ts';
-import { fetchArticlesInWindow, saveEditorial } from '../editorial/store.ts';
+import { collectArticleIds, fetchArticlesInWindow, saveEditorial } from '../editorial/store.ts';
 import type { EditorialSlot } from '../editorial/types.ts';
 import { getConfig } from '../lib/config.ts';
 
@@ -141,10 +141,3 @@ function formatBrtDate(d: Date): string {
   }).format(d);
 }
 
-function collectArticleIds(sections: { sourceArticleIds: number[] }[]): number[] {
-  const ids = new Set<number>();
-  for (const sec of sections) {
-    for (const id of sec.sourceArticleIds) ids.add(id);
-  }
-  return [...ids];
-}

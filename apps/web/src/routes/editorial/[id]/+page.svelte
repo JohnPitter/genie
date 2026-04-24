@@ -12,6 +12,7 @@
   $: archive = data.archive;
   $: quotes = data.quotes ?? {};
   $: sourceArticles = editorial.sourceArticles ?? [];
+  $: articlesById = new Map(sourceArticles.map(a => [a.id, a]));
 </script>
 
 <svelte:head>
@@ -37,7 +38,7 @@
 
       <div class="editorial-page__sections">
         {#each editorial.sections as section, i (section.category + i)}
-          <EditorialSection {section} articles={sourceArticles} {quotes} />
+          <EditorialSection {section} {articlesById} {quotes} />
         {/each}
       </div>
     </main>

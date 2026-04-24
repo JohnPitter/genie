@@ -4,7 +4,7 @@
   import type { EditorialSection, Article, Category, Quote } from '@genie/shared';
 
   export let section: EditorialSection;
-  export let articles: Article[] = [];
+  export let articlesById: Map<number, Article> = new Map();
   export let quotes: Record<string, Quote> = {};
 
   const CATEGORY_LABEL: Record<Category, string> = {
@@ -28,24 +28,30 @@
   };
 
   $: sourceArticles = section.sourceArticleIds
-    .map(id => articles.find(a => a.id === id))
+    .map(id => articlesById.get(id))
     .filter((a): a is Article => a !== undefined);
 
   $: categoryLabel = CATEGORY_LABEL[section.category] ?? section.category;
   $: categoryEmoji = CATEGORY_EMOJI[section.category] ?? '📰';
 
-  // Sentimento do setor baseado nas cotações dos tickers em destaque
+  const SENTIMENT_DISPLAY: Record<string, { label: string; icon: string }> = {
+    alta:    { label: 'Alta',    icon: '↑' },
+    baixa:   { label: 'Baixa',   icon: '↓' },
+    lateral: { label: 'Lateral', icon: '→' },
+  };
+
   $: sectionQuotes = section.highlightTickers
     .map(t => quotes[t])
     .filter((q): q is Quote => q !== undefined);
 
-  $: up = sectionQuotes.filter(q => q.changePct > 0).length;
-  $: down = sectionQuotes.filter(q => q.changePct < 0).length;
-  $: sentiment = sectionQuotes.length === 0
-    ? null
-    : up > down ? 'alta' : down > up ? 'baixa' : 'lateral';
-  $: sentimentLabel = sentiment === 'alta' ? 'Alta' : sentiment === 'baixa' ? 'Baixa' : 'Lateral';
-  $: sentimentIcon = sentiment === 'alta' ? '↑' : sentiment === 'baixa' ? '↓' : '→';
+  $: {
+    const up   = sectionQuotes.filter(q => q.changePct > 0).length;
+    const down = sectionQuotes.filter(q => q.changePct < 0).length;
+    sentiment  = sectionQuotes.length === 0 ? null : up > down ? 'alta' : down > up ? 'baixa' : 'lateral';
+  }
+
+  let sentiment: string | null = null;
+  $: sentimentDisplay = sentiment ? SENTIMENT_DISPLAY[sentiment] ?? null : null;
 </script>
 
 <article class="editorial-section" data-category={section.category}>
@@ -55,13 +61,13 @@
         <span class="editorial-section__emoji" aria-hidden="true">{categoryEmoji}</span>
         <span class="editorial-section__category-label">{categoryLabel}</span>
       </span>
-      {#if sentiment}
+      {#if sentimentDisplay}
         <span
           class="editorial-section__sentiment"
           class:editorial-section__sentiment--up={sentiment === 'alta'}
           class:editorial-section__sentiment--down={sentiment === 'baixa'}
           class:editorial-section__sentiment--flat={sentiment === 'lateral'}
-        >{sentimentIcon} {sentimentLabel}</span>
+        >{sentimentDisplay.icon} {sentimentDisplay.label}</span>
       {/if}
     </div>
     <h3 class="editorial-section__title">{section.title}</h3>
