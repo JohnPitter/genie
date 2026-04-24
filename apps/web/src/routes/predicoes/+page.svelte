@@ -167,7 +167,7 @@
 
   <!-- ── Tabs ────────────────────────────────────────── -->
   {#if data}
-    <nav class="tabs" role="tablist">
+    <div class="tabs" role="tablist">
       <button
         class="tab"
         class:tab--active={activeTab === 'buy'}
@@ -200,7 +200,7 @@
         <Minus size={14} />
         Todas
       </button>
-    </nav>
+    </div>
   {/if}
 
   <!-- ── Body ────────────────────────────────────────── -->

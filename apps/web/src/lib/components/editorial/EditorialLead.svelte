@@ -1,7 +1,7 @@
 <script lang="ts">
   export let title: string;
   export let body: string;
-  export let editionLabel = ''; // ex: "Edição 3 · Meio-dia"
+  export const editionLabel = ''; // reservado para uso futuro
 </script>
 
 <section class="editorial-lead" aria-label="Manchete do editorial">

@@ -17,7 +17,7 @@
   $: loadError = data.loadError;
   let quotes: Record<string, Quote> = {};
   $: sourceArticles = editorial?.sourceArticles ?? [];
-  $: articlesById = new Map(sourceArticles.map(a => [a.id, a]));
+  $: articlesById = new Map(sourceArticles.filter(a => a.id !== undefined).map(a => [a.id as number, a]));
 
   onMount(async () => {
     if (editorial) {

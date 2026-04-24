@@ -134,12 +134,10 @@
           <ChatPanel mode="inline" />
           <!-- Resize handle — desktop only -->
           {#if !isMobile}
-            <div
+            <button
               class="home__resize-handle"
-              role="separator"
+              type="button"
               aria-label="Redimensionar chat"
-              aria-orientation="horizontal"
-              tabindex="0"
               on:mousedown={startResize}
               on:touchstart={startResize}
               on:keydown={(e) => {
@@ -148,7 +146,7 @@
               }}
             >
               <span class="home__resize-dots" aria-hidden="true"></span>
-            </div>
+            </button>
           {/if}
         </div>
       </div>

@@ -228,30 +228,6 @@
     opacity: 0.6;
   }
 
-  /* ── Typing indicator ────────────────────────────── */
-  .message__typing-indicator {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-  }
-  .message__typing-indicator span {
-    width: 6px;
-    height: 6px;
-    background: var(--accent-lilac);
-    border-radius: 50%;
-    animation: typing-dot 1.2s ease-in-out infinite;
-  }
-  .message__typing-indicator span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-  .message__typing-indicator span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-
-  @keyframes typing-dot {
-    0%, 80%, 100% { transform: scale(0.8); opacity: 0.4; }
-    40%           { transform: scale(1.1); opacity: 1; }
-  }
 
   /* ── Tool activity pill (only while running) ────────── */
   .message__tool-activity {
@@ -473,6 +449,5 @@
 
   @media (prefers-reduced-motion: reduce) {
     .message { animation: none; }
-    .message__typing-indicator span { animation: none; }
   }
 </style>

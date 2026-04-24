@@ -1,7 +1,7 @@
 <script lang="ts">
   export let state: 'idle' | 'listening' | 'thinking' | 'speaking' | 'error' = 'idle';
   export let size: number = 240;
-  export let tokensPerSec: number = 0;
+  export const tokensPerSec: number = 0;
 
   function pulseDur(s: typeof state): string {
     switch (s) {

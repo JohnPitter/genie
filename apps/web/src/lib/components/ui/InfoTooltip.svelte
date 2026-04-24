@@ -7,12 +7,12 @@
   export let width: string = '240px';
 </script>
 
-<span class="tip" tabindex="0" aria-label={text}>
+<button class="tip" aria-label={text} type="button">
   <HelpCircle size={size} aria-hidden="true" />
   <span class="tip__bubble" style="--w: {width}" role="tooltip">
     {text}
   </span>
-</span>
+</button>
 
 <style>
   .tip {
@@ -23,6 +23,9 @@
     cursor: help;
     vertical-align: middle;
     outline: none;
+    background: none;
+    border: none;
+    padding: 0;
   }
 
   .tip:hover,
