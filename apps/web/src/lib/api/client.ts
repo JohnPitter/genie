@@ -26,6 +26,32 @@ export interface ApiConfig {
   fetch?: typeof fetch;
 }
 
+// ── Golden Signals ────────────────────────────────────────────────────────────
+
+export interface GoldenSignals {
+  latency: { p50: number; p95: number; p99: number; avg: number };
+  traffic: {
+    rpm: number;
+    total: number;
+    byMethod: Record<string, number>;
+    topPaths: Array<{ path: string; count: number }>;
+  };
+  errors: {
+    rate: number;
+    total4xx: number;
+    total5xx: number;
+    recentErrors: Array<{ path: string; status: number; ts: number }>;
+  };
+  saturation: {
+    heapUsedMB: number;
+    heapTotalMB: number;
+    rssMB: number;
+    uptimeSeconds: number;
+    pid: number;
+  };
+  meta: { windowMinutes: number; samples: number; since: string };
+}
+
 // ── Health / Config response shapes ──────────────────────────────────────────
 
 export interface HealthResponse {
@@ -148,6 +174,16 @@ export class ApiClient {
   listEditorials(limit = 14): Promise<EditorialSummary[]> {
     const params = new URLSearchParams({ limit: String(limit) });
     return this.request<EditorialSummary[]>('GET', `/api/editorials?${params}`);
+  }
+
+  /** Retorna os Golden Signals coletados na última hora (requer token admin). */
+  getStats(adminToken: string): Promise<GoldenSignals> {
+    return this.requestWithHeaders<GoldenSignals>(
+      'GET',
+      '/api/admin/stats',
+      undefined,
+      { 'X-Admin-Token': adminToken },
+    );
   }
 
   /** Validates the admin token. Returns true if the token grants access, false otherwise. */

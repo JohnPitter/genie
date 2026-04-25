@@ -19,6 +19,8 @@ import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAnalysisRoutes } from './routes/analysis.ts';
 import { registerPredictionsRoutes } from './routes/predictions.ts';
 import { registerEditorialRoutes } from './routes/editorials.ts';
+import { registerStatsRoutes } from './routes/stats.ts';
+import { recordRequest } from '../lib/metrics.ts';
 
 export const VERSION = '0.2.0';
 
@@ -105,15 +107,18 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }),
   });
 
-  // ── Request logger ─────────────────────────────────────────────────────────
+  // ── Request logger + metrics ───────────────────────────────────────────────
   app.addHook('onResponse', (req, reply, done) => {
+    const path = req.routeOptions?.url ?? req.url;
+    const durationMs = Math.round(reply.elapsedTime);
     deps.log.info({
       method: req.method,
-      path: req.routeOptions?.url ?? req.url,
+      path,
       status: reply.statusCode,
-      durationMs: Math.round(reply.elapsedTime),
+      durationMs,
       ip: clientIp(req),
     }, 'request');
+    recordRequest({ method: req.method, path, status: reply.statusCode, durationMs });
     done();
   });
 
@@ -151,6 +156,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerAnalysisRoutes(app, deps);
   await registerPredictionsRoutes(app, deps);
   await registerEditorialRoutes(app, deps);
+  await registerStatsRoutes(app, deps);
 
   return app;
 }

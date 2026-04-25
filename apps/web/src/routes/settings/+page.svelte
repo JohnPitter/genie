@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Database, Cpu, Clock, Key, Newspaper } from 'lucide-svelte';
+  import { ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle, AlertCircle, Database, Cpu, Clock, Key, Newspaper, Activity } from 'lucide-svelte';
   import { apiClient } from '$lib/api/client';
 
   const SESSION_TOKEN_KEY = 'genie_admin_token';
@@ -272,6 +272,22 @@
           </div>
         </div>
       {/if}
+    </section>
+
+    <!-- ── Observabilidade ──────────────────────────────── -->
+    <section class="card">
+      <div class="obs-row">
+        <div class="obs-row__info">
+          <div class="obs-row__icon"><Activity size={18} /></div>
+          <div>
+            <h2 class="card__title">Observabilidade</h2>
+            <p class="card__desc">Golden Signals em tempo real: latência, tráfego, erros e saturação.</p>
+          </div>
+        </div>
+        <a href="/stats" class="obs-btn">
+          Ver métricas →
+        </a>
+      </div>
     </section>
 
     <!-- ── Configuração atual ─────────────────────────── -->
@@ -921,6 +937,42 @@
     letter-spacing: 0.2em;
     color: var(--accent-lilac);
   }
+
+  /* ── Observabilidade ───────────────────────────────── */
+  .obs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+  }
+
+  .obs-row__info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .obs-row__icon {
+    color: var(--accent-lilac);
+    flex-shrink: 0;
+  }
+
+  .obs-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--glass-lilac);
+    border: 1px solid var(--border-interactive);
+    border-radius: var(--radius-sm);
+    color: var(--accent-lilac);
+    font-family: var(--font-body);
+    font-size: var(--text-micro);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .obs-btn:hover { background: rgba(167, 155, 255, 0.18); color: var(--text-primary); }
 
   /* ── Spin animation ────────────────────────────────── */
   :global(.spin) {
