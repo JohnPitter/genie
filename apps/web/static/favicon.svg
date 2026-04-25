@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#edeaff" stop-opacity="0.95"/>
+      <stop offset="40%"  stop-color="#a79bff" stop-opacity="0.75"/>
+      <stop offset="75%"  stop-color="#6c42ff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#050507" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#edeaff" stop-opacity="0.3"/>
+      <stop offset="50%"  stop-color="#a79bff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#6c42ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="2.5"/>
+    </filter>
+  </defs>
+
+  <!-- Halo externo pulsante -->
+  <circle cx="16" cy="16" r="14" fill="url(#halo)" filter="url(#blur)">
+    <animate attributeName="r" values="12;15;12" dur="1.8s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.6;1;0.6" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Core do orb -->
+  <circle cx="16" cy="16" r="9" fill="url(#glow)">
+    <animate attributeName="r" values="9;10.5;9" dur="1.8s" repeatCount="indefinite" begin="0.2s"/>
+    <animate attributeName="opacity" values="0.85;1;0.85" dur="1.8s" repeatCount="indefinite" begin="0.2s"/>
+  </circle>
+
+  <!-- Brilho central -->
+  <circle cx="16" cy="16" r="4.5" fill="#edeaff" opacity="0.9">
+    <animate attributeName="r" values="4.5;5.5;4.5" dur="1.8s" repeatCount="indefinite" begin="0.1s"/>
+    <animate attributeName="opacity" values="0.75;1;0.75" dur="1.8s" repeatCount="indefinite" begin="0.1s"/>
+  </circle>
+</svg>

@@ -109,16 +109,16 @@
 
   .logo-orb__glow {
     position: absolute;
-    inset: -15%;
+    inset: -20%;
     background: radial-gradient(
       circle,
-      rgba(237, 235, 255, 0.2) 0%,
-      rgba(167, 155, 255, 0.25) 40%,
-      rgba(108, 66, 255, 0.1) 70%,
+      rgba(237, 235, 255, 0.35) 0%,
+      rgba(167, 155, 255, 0.4) 40%,
+      rgba(108, 66, 255, 0.15) 70%,
       transparent 85%
     );
-    filter: blur(6px);
-    animation: orb-breathe var(--dur-cinematic) var(--ease-standard) infinite alternate;
+    filter: blur(8px);
+    animation: orb-breathe 1800ms ease-in-out infinite alternate;
     border-radius: 50%;
   }
 
@@ -129,11 +129,19 @@
     background: radial-gradient(
       circle,
       rgba(237, 235, 255, 0.95) 0%,
-      rgba(167, 155, 255, 0.7) 40%,
-      rgba(108, 66, 255, 0.2) 70%,
+      rgba(167, 155, 255, 0.8) 40%,
+      rgba(108, 66, 255, 0.3) 70%,
       rgba(5, 5, 7, 0) 100%
     );
-    box-shadow: 0 0 16px rgba(167, 155, 255, 0.5);
+    box-shadow:
+      0 0 12px rgba(167, 155, 255, 0.7),
+      0 0 24px rgba(108, 66, 255, 0.3);
+    animation: orb-breathe 1800ms ease-in-out infinite alternate-reverse;
+  }
+
+  @keyframes orb-breathe {
+    from { transform: scale(1);    opacity: 0.82; }
+    to   { transform: scale(1.12); opacity: 1;    }
   }
 
   .logo-text {
