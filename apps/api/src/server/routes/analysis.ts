@@ -16,6 +16,12 @@ const cache = new TTLCache<StockAnalysis>();
 export async function registerAnalysisRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
   app.get<{ Params: { ticker: string } }>(
     '/api/b3/analysis/:ticker',
+    {
+      config: {
+        // Análise LLM é pesada — limita a 10 chamadas/min por IP
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
+    },
     async (req, reply) => {
       const ticker = req.params.ticker.toUpperCase().trim();
 

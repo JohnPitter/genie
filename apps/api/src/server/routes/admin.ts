@@ -28,8 +28,10 @@ export async function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps)
     }
   });
 
-  // Validation endpoint: if preHandler let it through, token is valid
-  app.get('/api/admin/auth', async (_req, reply) => {
+  // Validation endpoint: rate-limited pra proteger contra brute-force de token
+  app.get('/api/admin/auth', {
+    config: { rateLimit: { max: 20, timeWindow: '15 minutes' } },
+  }, async (_req, reply) => {
     return reply.send({ ok: true });
   });
 

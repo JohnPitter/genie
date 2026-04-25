@@ -1,7 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
-import type { FastifyInstance } from 'fastify';
+import helmet from '@fastify/helmet';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { DB } from '../store/db.ts';
 import type { Source } from '../b3/source.ts';
 import type { NewsService } from '../news/service.ts';
@@ -18,8 +19,19 @@ import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAnalysisRoutes } from './routes/analysis.ts';
 import { registerPredictionsRoutes } from './routes/predictions.ts';
 import { registerEditorialRoutes } from './routes/editorials.ts';
+import { getConfig } from '../lib/config.ts';
 
 export const VERSION = '0.2.0';
+
+/** Extrai o IP real do cliente respeitando proxies confiáveis. */
+function clientIp(req: FastifyRequest): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+    return (first ?? '').trim();
+  }
+  return req.ip ?? 'unknown';
+}
 
 export interface AppDeps {
   db: DB;
@@ -35,35 +47,87 @@ export interface AppDeps {
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+  const config = getConfig();
+  const isProd = config.NODE_ENV === 'production';
+
+  const app = Fastify({
+    logger: false,
+    // Limite de tamanho do body — previne payloads gigantes (DoS via body inflation)
+    bodyLimit: 64 * 1024, // 64 KB
+    // Confia em proxy headers apenas se configurado explicitamente
+    trustProxy: config.TRUST_PROXY === 'true',
+  });
+
+  // ── Security headers (Helmet) ──────────────────────────────────────────────
+  // Desativa contentSecurityPolicy pois a API é JSON-only (sem HTML)
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    dnsPrefetchControl: { allow: false },
+    frameguard: { action: 'deny' },
+    hidePoweredBy: true,
+    hsts: isProd ? { maxAge: 31_536_000, includeSubDomains: true } : false,
+    ieNoOpen: true,
+    noSniff: true,
+    originAgentCluster: true,
+    referrerPolicy: { policy: 'no-referrer' },
+    xssFilter: true,
+  });
+
+  // ── CORS ───────────────────────────────────────────────────────────────────
+  const devOrigins = ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:5174'];
+  const prodOrigins = config.ALLOWED_ORIGINS
+    ? config.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+    : [];
+  const allowedOrigins = [...devOrigins, ...prodOrigins];
 
   await app.register(cors, {
-    origin: ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:5174'],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Accept', 'Authorization', 'Content-Type'],
+    allowedHeaders: ['Accept', 'Authorization', 'Content-Type', 'X-Admin-Token'],
+    credentials: false,
   });
 
+  // ── Rate limiting global ───────────────────────────────────────────────────
+  // Chave por IP real — evita que um único cliente consuma todo o pool
   await app.register(rateLimit, {
-    max: 200,
+    global: true,
+    max: 120,
     timeWindow: '1 minute',
-    errorResponseBuilder: () => ({ error: 'too many requests' }),
+    keyGenerator: clientIp,
+    errorResponseBuilder: (_req, context) => ({
+      error: 'too many requests',
+      retryAfter: Math.ceil((context as { ttl: number }).ttl / 1000),
+    }),
   });
 
-  // Request logger hook
+  // ── Request logger ─────────────────────────────────────────────────────────
   app.addHook('onResponse', (req, reply, done) => {
     deps.log.info({
       method: req.method,
       path: req.routeOptions?.url ?? req.url,
       status: reply.statusCode,
       durationMs: Math.round(reply.elapsedTime),
+      ip: clientIp(req),
     }, 'request');
     done();
   });
 
-  // Error handler
+  // ── Error handler ──────────────────────────────────────────────────────────
+  // Em produção não vaza stack traces; em desenvolvimento mantém detalhes
   app.setErrorHandler((err, _req, reply) => {
     deps.log.error({ err }, 'unhandled error');
-    reply.status(500).send({ error: 'internal server error' });
+    if (reply.statusCode === 429) {
+      // Já tratado pelo rate-limit plugin — não sobrescrever
+      return;
+    }
+    const detail = err instanceof Error ? err.message : String(err);
+    reply.status(500).send({
+      error: 'internal server error',
+      ...(isProd ? {} : { detail }),
+    });
   });
 
   // Health

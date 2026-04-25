@@ -65,7 +65,9 @@ export async function registerB3Routes(app: FastifyInstance, deps: AppDeps): Pro
     return reply.send(result);
   });
 
-  app.post<{ Body: { tickers: unknown } }>('/api/b3/quotes/batch', async (req, reply) => {
+  app.post<{ Body: { tickers: unknown } }>('/api/b3/quotes/batch', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, async (req, reply) => {
     if (!deps.b3) return reply.status(503).send({ error: 'b3 data source not configured' });
 
     const { tickers } = req.body;

@@ -20,7 +20,12 @@ interface ChatStreamBody {
 }
 
 export async function registerChatRoutes(app: FastifyInstance, deps: AppDeps): Promise<void> {
-  app.post<{ Body: ChatStreamBody }>('/api/chat/stream', async (req: FastifyRequest<{ Body: ChatStreamBody }>, reply: FastifyReply) => {
+  app.post<{ Body: ChatStreamBody }>('/api/chat/stream', {
+    config: {
+      // Chat com IA é caro — limita a 5 mensagens/min por IP para prevenir abuso
+      rateLimit: { max: 5, timeWindow: '1 minute' },
+    },
+  }, async (req: FastifyRequest<{ Body: ChatStreamBody }>, reply: FastifyReply) => {
     if (!deps.loop) return reply.status(503).send({ error: 'agent not available' });
 
     const { message, contextData } = req.body;

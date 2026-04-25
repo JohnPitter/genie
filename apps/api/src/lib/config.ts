@@ -11,6 +11,10 @@ const schema = z.object({
   OPENROUTER_MODEL_FALLBACK: z.string().optional(),
   WEB_SEARCH_API_KEY: z.string().optional(),
   ADMIN_TOKEN: z.string().optional(),
+  /** Comma-separated list of allowed CORS origins for production (e.g. https://genie.example.com) */
+  ALLOWED_ORIGINS: z.string().optional(),
+  /** Trust proxy headers (X-Forwarded-For) — set to 'true' when behind nginx/Cloudflare/etc. */
+  TRUST_PROXY: z.string().optional(),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
