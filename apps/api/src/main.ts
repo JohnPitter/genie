@@ -105,7 +105,10 @@ const app = await buildApp({
   editorialSvc,
   editorialJob,
   model: config.OPENROUTER_MODEL,
+  isProd: config.NODE_ENV === 'production',
+  trustProxy: config.TRUST_PROXY === 'true',
   ...(config.ADMIN_TOKEN ? { adminToken: config.ADMIN_TOKEN } : {}),
+  ...(config.ALLOWED_ORIGINS ? { allowedOrigins: config.ALLOWED_ORIGINS } : {}),
 });
 await app.listen({ port: config.PORT, host: '0.0.0.0' });
 log.info({ port: config.PORT }, 'server listening');

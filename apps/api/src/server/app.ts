@@ -19,7 +19,6 @@ import { registerAdminRoutes } from './routes/admin.ts';
 import { registerAnalysisRoutes } from './routes/analysis.ts';
 import { registerPredictionsRoutes } from './routes/predictions.ts';
 import { registerEditorialRoutes } from './routes/editorials.ts';
-import { getConfig } from '../lib/config.ts';
 
 export const VERSION = '0.2.0';
 
@@ -44,18 +43,21 @@ export interface AppDeps {
   editorialJob?: EditorialRefreshJob;
   adminToken?: string;
   model?: string;
+  /** Comma-separated extra CORS origins for production */
+  allowedOrigins?: string;
+  /** Whether to trust proxy headers (X-Forwarded-For) */
+  trustProxy?: boolean;
+  /** Used to toggle prod-only features (HSTS, error detail suppression) */
+  isProd?: boolean;
 }
 
 export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
-  const config = getConfig();
-  const isProd = config.NODE_ENV === 'production';
+  const isProd = deps.isProd ?? false;
 
   const app = Fastify({
     logger: false,
-    // Limite de tamanho do body — previne payloads gigantes (DoS via body inflation)
-    bodyLimit: 64 * 1024, // 64 KB
-    // Confia em proxy headers apenas se configurado explicitamente
-    trustProxy: config.TRUST_PROXY === 'true',
+    bodyLimit: 64 * 1024,
+    trustProxy: deps.trustProxy ?? false,
   });
 
   // ── Security headers (Helmet) ──────────────────────────────────────────────
@@ -78,8 +80,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // ── CORS ───────────────────────────────────────────────────────────────────
   const devOrigins = ['http://localhost:5173', 'http://localhost:4173', 'http://localhost:5174'];
-  const prodOrigins = config.ALLOWED_ORIGINS
-    ? config.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  const prodOrigins = deps.allowedOrigins
+    ? deps.allowedOrigins.split(',').map(o => o.trim()).filter(Boolean)
     : [];
   const allowedOrigins = [...devOrigins, ...prodOrigins];
 
