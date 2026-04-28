@@ -120,6 +120,8 @@
     filter: blur(8px);
     animation: orb-breathe 1800ms ease-in-out infinite alternate;
     border-radius: 50%;
+    will-change: transform, opacity;
+    transform: translateZ(0);
   }
 
   .logo-orb__core {
@@ -137,6 +139,8 @@
       0 0 12px rgba(167, 155, 255, 0.7),
       0 0 24px rgba(108, 66, 255, 0.3);
     animation: orb-breathe 1800ms ease-in-out infinite alternate-reverse;
+    will-change: transform, opacity;
+    transform: translateZ(0);
   }
 
   @keyframes orb-breathe {
@@ -251,6 +255,31 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .sidebar__status-dot { animation: none; }
+    .sidebar__status-dot,
+    .logo-orb__glow,
+    .logo-orb__core {
+      animation: none;
+    }
+  }
+
+  /* Mobile: scale + blur(8px) + box-shadow grande em 2 camadas
+     simultâneas trava no compositor. Mantemos o orb animado mas só
+     com opacity (cheap) numa camada, blur reduzido, sem scale. */
+  @media (max-width: 768px) {
+    .logo-orb__glow {
+      animation: none;
+      filter: blur(6px);
+      opacity: 0.85;
+      will-change: auto;
+    }
+    .logo-orb__core {
+      animation: orb-pulse 2400ms ease-in-out infinite alternate;
+      box-shadow: 0 0 14px rgba(167, 155, 255, 0.55);
+    }
+  }
+
+  @keyframes orb-pulse {
+    from { opacity: 0.78; }
+    to   { opacity: 1;    }
   }
 </style>
