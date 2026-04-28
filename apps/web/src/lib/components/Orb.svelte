@@ -235,6 +235,11 @@
     to   { r: 96; opacity: 1;   }
   }
 
+  @keyframes halo-breathe-cheap {
+    from { opacity: 0.7; }
+    to   { opacity: 1;   }
+  }
+
   /* ── Ring rotation (each at its own speed and direction) ── */
   .ring--h {
     animation: rotate var(--rotate-dur) linear infinite;
@@ -308,6 +313,31 @@
     .particle--2,
     .particle--3 {
       animation: none;
+    }
+  }
+
+  /* ── Mobile (<=768px): simplifica para nao travar ──
+     - halo anima so opacity (animar SVG `r` forca recompute por frame)
+     - particulas com filter `glow` reaplicam gaussian blur cada frame: ocultas
+     - aneis giram bem mais devagar (menos frames de invalidacao do gradient)
+     - terceiro anel oculto */
+  @media (max-width: 768px) {
+    .halo {
+      animation: halo-breathe-cheap var(--pulse-dur) ease-in-out infinite alternate;
+    }
+    .particle--1,
+    .particle--2,
+    .particle--3 {
+      display: none;
+    }
+    .ring--t-35 {
+      display: none;
+    }
+    .ring--h {
+      animation-duration: calc(var(--rotate-dur) * 2);
+    }
+    .ring--t55 {
+      animation-duration: calc(var(--rotate-dur) * 2.5);
     }
   }
 </style>

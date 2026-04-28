@@ -52,6 +52,7 @@
     }
     .hero-orb__orb-wrap {
       width: clamp(120px, 38vw, 160px);
+      filter: none;
     }
   }
 
