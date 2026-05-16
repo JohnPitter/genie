@@ -4,9 +4,12 @@ import type { Quote, Fundamentals } from './types.ts';
 import { validateTicker } from './source.ts';
 import type { Source } from './source.ts';
 import { buildHeaders, SCRAPER_TIMEOUT_MS, fetchWithTimeout } from './http.ts';
+import { isFII } from './categories.ts';
 import type { Logger } from 'pino';
 
 const DEFAULT_BASE_URL = 'https://statusinvest.com.br';
+const STOCK_PATH = 'acoes';
+const FII_PATH = 'fundos-imobiliarios';
 
 export function parseBrazilianFloat(raw: string): number | null {
   // Strip percent, spaces, handle sign
@@ -36,7 +39,7 @@ export class StatusInvestScraper implements Source {
 
     const price = this.parsePrice($);
     if (price === null) {
-      throw new B3Error('SOURCE_UNAVAILABLE', `statusinvest: price element not found for ${ticker}`);
+      throw new B3Error('TICKER_NOT_FOUND', `statusinvest: price element not found for ${ticker}`);
     }
 
     const q: Quote = {
@@ -99,7 +102,8 @@ export class StatusInvestScraper implements Source {
   }
 
   private async fetchHTML(ticker: string, signal?: AbortSignal): Promise<string> {
-    const url = `${this.baseURL}/acoes/${ticker.toLowerCase()}`;
+    const assetPath = isFII(ticker) ? FII_PATH : STOCK_PATH;
+    const url = `${this.baseURL}/${assetPath}/${ticker.toLowerCase()}`;
     let resp: Response;
     try {
       resp = await fetchWithTimeout(

@@ -16,6 +16,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 - Extraída abstração compartilhada para leitura de cotações, reutilizada por `/api/b3/quote/:ticker`, `/api/b3/quotes/batch` e pelos endpoints públicos.
 - Corrigido o handler global de erros para preservar respostas `429` do rate limit em vez de convertê-las para `500`.
+- Removido `brapi.dev` da cascata runtime de cotações; Google Finance agora é a fonte primária, seguido por StatusInvest, Yahoo Finance e Fundamentus.
+- Corrigido parser do Google Finance para o HTML atual e ajustado o catálogo B3 para tickers vigentes que respondem nas fontes ativas.
+- Ajustado o circuit breaker para não abrir por ticker inexistente/sem suporte em uma fonte específica.
+- Validador B3 agora aceita tickers com sufixo alfabético final, como `EQMA3B` e `MRSA3B`.
 
 ## [2.1.0] - 2026-04-24
 

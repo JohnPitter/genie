@@ -1,4 +1,4 @@
-import { B3Error, isAllSourcesFailed } from './types.ts';
+import { B3Error, isAllSourcesFailed, isTickerNotFound } from './types.ts';
 import type { Quote, Fundamentals } from './types.ts';
 import { validateTicker } from './source.ts';
 import type { Source } from './source.ts';
@@ -33,9 +33,13 @@ export class Cascade implements Source {
       return cached;
     }
 
+    let hadTickerNotFound = false;
+    let hadSourceFailure = false;
+
     for (const src of this.sources) {
       if (this.breaker.isOpen(src.name())) {
         this.log.warn({ source: src.name() }, 'circuit open, skipping source');
+        hadSourceFailure = true;
         continue;
       }
 
@@ -48,10 +52,18 @@ export class Cascade implements Source {
         return q;
       } catch (err) {
         this.log.warn({ source: src.name(), ticker, err }, 'quote failed, trying next source');
+        if (isTickerNotFound(err)) {
+          hadTickerNotFound = true;
+          continue;
+        }
+        hadSourceFailure = true;
         this.breaker.recordFailure(src.name());
       }
     }
 
+    if (hadTickerNotFound && !hadSourceFailure) {
+      throw new B3Error('TICKER_NOT_FOUND', `b3: ticker not found: ticker=${ticker}`);
+    }
     throw new B3Error('ALL_SOURCES_FAILED', `b3: all sources failed: ticker=${ticker}`);
   }
 
@@ -64,9 +76,13 @@ export class Cascade implements Source {
       return cached;
     }
 
+    let hadTickerNotFound = false;
+    let hadSourceFailure = false;
+
     for (const src of this.sources) {
       if (this.breaker.isOpen(src.name())) {
         this.log.warn({ source: src.name() }, 'circuit open, skipping source');
+        hadSourceFailure = true;
         continue;
       }
 
@@ -79,10 +95,18 @@ export class Cascade implements Source {
         return f;
       } catch (err) {
         this.log.warn({ source: src.name(), ticker, err }, 'fundamentals failed, trying next source');
+        if (isTickerNotFound(err)) {
+          hadTickerNotFound = true;
+          continue;
+        }
+        hadSourceFailure = true;
         this.breaker.recordFailure(src.name());
       }
     }
 
+    if (hadTickerNotFound && !hadSourceFailure) {
+      throw new B3Error('TICKER_NOT_FOUND', `b3: ticker not found: ticker=${ticker}`);
+    }
     throw new B3Error('ALL_SOURCES_FAILED', `b3: all sources failed: ticker=${ticker}`);
   }
 

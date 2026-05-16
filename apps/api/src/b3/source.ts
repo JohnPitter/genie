@@ -3,7 +3,7 @@ import type { Quote, Fundamentals } from './types.ts';
 
 export type { Quote, Fundamentals };
 
-const TICKER_REGEX = /^[A-Z0-9]{2,6}[0-9]{1,2}$/;
+const TICKER_REGEX = /^[A-Z0-9]{2,6}[0-9]{1,2}[A-Z]?$/;
 
 export function validateTicker(ticker: string): void {
   if (!TICKER_REGEX.test(ticker)) {

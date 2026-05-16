@@ -6,6 +6,7 @@ import { buildHeaders, SCRAPER_TIMEOUT_MS, fetchWithTimeout } from './http.ts';
 import type { Logger } from 'pino';
 
 const BASE_URL = 'https://www.google.com/finance/quote';
+const GOOGLE_FINANCE_TITLE_SUFFIXES = [' Stock Price & News - Google Finance', ' - Google Finance'];
 
 function extractAttrFloat(body: string, attr: string): number {
   const idx = body.indexOf(attr);
@@ -14,6 +15,23 @@ function extractAttrFloat(body: string, attr: string): number {
   const end = body.indexOf('"', start);
   if (end === -1) return 0;
   return parseFloat(body.slice(start, end)) || 0;
+}
+
+function parseLocalizedFloat(raw: string): number {
+  const cleaned = raw
+    .replace(/R\$/g, '')
+    .replace(/%/g, '')
+    .replace(/\s/g, '')
+    .trim();
+
+  if (cleaned.includes(',')) {
+    return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  return parseFloat(cleaned.replace(/,/g, '')) || 0;
+}
+
+function stripTags(raw: string): string {
+  return raw.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
 }
 
 function parseFromDataAttrs(body: string): number {
@@ -49,6 +67,20 @@ function parseFromInlineJSON(body: string): { price: number; changePct: number; 
   }
 }
 
+function parseFromBetaMarkup(body: string): { price: number; changePct: number; name: string } | null {
+  const priceMatch = body.match(/<span[^>]*>\s*R\$\s*([\d.,]+)\s*<\/span>/);
+  if (!priceMatch?.[1]) return null;
+
+  const nameMatch = body.match(/<div class="gO24Ff">([^<]+)<\/div>/);
+  const changeMatch = body.match(/<span class="gMvHvf">([^<]+)<\/span>/);
+
+  return {
+    price: parseLocalizedFloat(priceMatch[1]),
+    changePct: changeMatch?.[1] ? parseLocalizedFloat(stripTags(changeMatch[1])) : 0,
+    name: nameMatch?.[1] ? stripTags(nameMatch[1]) : '',
+  };
+}
+
 function parseName(body: string): string {
   const zzIdx = body.indexOf('class="zzDege"');
   if (zzIdx !== -1) {
@@ -67,7 +99,7 @@ function parseName(body: string): string {
     const e = body.indexOf('</title>', s);
     if (e !== -1) {
       let title = body.slice(s, e).trim();
-      for (const suffix of [' Stock Price & News - Google Finance', ' - Google Finance']) {
+      for (const suffix of GOOGLE_FINANCE_TITLE_SUFFIXES) {
         title = title.endsWith(suffix) ? title.slice(0, -suffix.length) : title;
       }
       const paren = title.lastIndexOf(' (');
@@ -111,9 +143,16 @@ export class GoogleFinanceSource implements Source {
     const body = await resp.text();
 
     const fromJSON = parseFromInlineJSON(body);
+    const fromBeta = fromJSON ? null : parseFromBetaMarkup(body);
     let price = fromJSON?.price ?? 0;
     let changePct = fromJSON?.changePct ?? 0;
     let name = fromJSON?.name ?? '';
+
+    if (!price && fromBeta) {
+      price = fromBeta.price;
+      changePct = fromBeta.changePct;
+      name = fromBeta.name;
+    }
 
     if (!price) {
       price = parseFromDataAttrs(body);

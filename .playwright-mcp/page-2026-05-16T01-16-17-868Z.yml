@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - complementary "Navegação principal" [ref=e4]:
+      - generic [ref=e9]: Genie
+      - navigation [ref=e10]:
+        - link "Início" [ref=e11] [cursor=pointer]:
+          - /url: /
+          - img [ref=e13]
+          - generic [ref=e16]: Início
+        - link "Predições IA" [ref=e17] [cursor=pointer]:
+          - /url: /predicoes
+          - img [ref=e19]
+          - generic [ref=e21]: Predições IA
+        - link "Favoritos" [ref=e22] [cursor=pointer]:
+          - /url: /favorites
+          - img [ref=e24]
+          - generic [ref=e26]: Favoritos
+        - link "Editorial" [ref=e27] [cursor=pointer]:
+          - /url: /editorial
+          - img [ref=e29]
+          - generic [ref=e32]: Editorial
+        - link "Rankings" [ref=e33] [cursor=pointer]:
+          - /url: /rankings
+          - img [ref=e35]
+          - generic [ref=e38]: Rankings
+      - generic [ref=e42]: v2.0.0 · online
+    - main [ref=e191]:
+      - generic [ref=e192]:
+        - generic [ref=e193]:
+          - img [ref=e194]
+          - heading "Rankings" [level=1] [ref=e197]
+        - paragraph [ref=e198]: Os ativos mais comentados nas notícias por categoria, com cotação em tempo real.
+      - generic [ref=e200]:
+        - img [ref=e201]
+        - textbox "Buscar ativo B3" [ref=e204]:
+          - /placeholder: "Buscar ativo fora do ranking… ex: VALE3"
+      - navigation "Categorias de notícias" [ref=e205]:
+        - tablist [ref=e206]:
+          - tab "Categoria 📈 Financeiro" [selected] [ref=e207] [cursor=pointer]: 📈 Financeiro
+          - tab "Categoria ⚗️ Commodities" [ref=e208] [cursor=pointer]: ⚗️ Commodities
+          - tab "Categoria 🛍️ Varejo" [ref=e209] [cursor=pointer]: 🛍️ Varejo
+          - tab "Categoria ⚡ Energia" [ref=e210] [cursor=pointer]: ⚡ Energia
+          - tab "Categoria 💧 Saneamento" [ref=e211] [cursor=pointer]: 💧 Saneamento
+          - tab "Categoria 💻 Tecnologia" [ref=e212] [cursor=pointer]: 💻 Tecnologia
+          - tab "Categoria 🏥 Saúde" [ref=e213] [cursor=pointer]: 🏥 Saúde
+      - generic [ref=e215]:
+        - link "Abrir análise de BBDC3" [ref=e216] [cursor=pointer]:
+          - /url: /asset/BBDC3
+          - generic "Posição 1" [ref=e217]: 🥇
+          - generic [ref=e218]:
+            - generic [ref=e219]: BBDC3
+            - generic [ref=e220]: BBDC3 - BRADESCO
+            - generic [ref=e221]: 15 menções em notícias
+          - generic [ref=e222]:
+            - generic [ref=e223]: R$ 15,36
+            - generic [ref=e224]:
+              - img [ref=e225]
+              - text: +0.00%
+          - button "Adicionar aos favoritos" [ref=e226]:
+            - img [ref=e227]
+        - link "Abrir análise de ITUB3" [ref=e229] [cursor=pointer]:
+          - /url: /asset/ITUB3
+          - generic "Posição 2" [ref=e230]: 🥈
+          - generic [ref=e231]:
+            - generic [ref=e232]: ITUB3
+            - generic [ref=e233]: ITUB3 - BANCO ITAU UNIBANCO
+            - generic [ref=e234]: 7 menções em notícias
+          - generic [ref=e235]:
+            - generic [ref=e236]: R$ 40,26
+            - generic [ref=e237]:
+              - img [ref=e238]
+              - text: +0.00%
+          - button "Adicionar aos favoritos" [ref=e239]:
+            - img [ref=e240]
+        - link "Abrir análise de ITUB4" [ref=e242] [cursor=pointer]:
+          - /url: /asset/ITUB4
+          - generic "Posição 3" [ref=e243]: 🥉
+          - generic [ref=e244]:
+            - generic [ref=e245]: ITUB4
+            - generic [ref=e246]: Itau Unibanco Holding SA Pfd
+            - generic [ref=e247]: 5 menções em notícias
+          - generic [ref=e248]:
+            - generic [ref=e249]: R$ 39,70
+            - generic [ref=e250]:
+              - img [ref=e251]
+              - text: "-1.73%"
+          - button "Adicionar aos favoritos" [ref=e254]:
+            - img [ref=e255]
+        - link "Abrir análise de BBDC4" [ref=e257] [cursor=pointer]:
+          - /url: /asset/BBDC4
+          - generic "Posição 4" [ref=e258]: "4"
+          - generic [ref=e259]:
+            - generic [ref=e260]: BBDC4
+            - generic [ref=e261]: BBDC4 - BRADESCO
+            - generic [ref=e262]: 4 menções em notícias
+          - generic [ref=e263]:
+            - generic [ref=e264]: R$ 17,69
+            - generic [ref=e265]:
+              - img [ref=e266]
+              - text: +0.00%
+          - button "Adicionar aos favoritos" [ref=e267]:
+            - img [ref=e268]
+        - link "Abrir análise de BBAS3" [ref=e270] [cursor=pointer]:
+          - /url: /asset/BBAS3
+          - generic "Posição 5" [ref=e271]: "5"
+          - generic [ref=e272]:
+            - generic [ref=e273]: BBAS3
+            - generic [ref=e274]: BBAS3 - BANCO BRASIL
+            - generic [ref=e275]: 0 menções em notícias
+          - generic [ref=e276]:
+            - generic [ref=e277]: R$ 20,70
+            - generic [ref=e278]:
+              - img [ref=e279]
+              - text: +0.00%
+          - button "Adicionar aos favoritos" [ref=e280]:
+            - img [ref=e281]
+  - generic [ref=e189]: Rankings B3 — Genie

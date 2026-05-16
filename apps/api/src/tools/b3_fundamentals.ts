@@ -10,7 +10,7 @@ export function b3FundamentalsTool(source: Source, log: Logger): Tool {
     schema: {
       type: 'object',
       properties: {
-        ticker: { type: 'string', pattern: '^[A-Z]{4}[0-9]{1,2}$', description: 'Código do ativo B3, ex PETR4' },
+        ticker: { type: 'string', pattern: '^[A-Z0-9]{2,6}[0-9]{1,2}[A-Z]?$', description: 'Código do ativo B3, ex PETR4' },
       },
       required: ['ticker'],
     },

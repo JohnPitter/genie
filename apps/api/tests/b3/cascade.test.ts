@@ -25,6 +25,18 @@ function stubSource(name: string, quoteResult: Quote | Error, fundamentalsResult
   };
 }
 
+function dynamicSource(name: string, quote: (ticker: string) => Quote | Error): Source {
+  return {
+    name: () => name,
+    quote: async (ticker) => {
+      const result = quote(ticker);
+      if (result instanceof Error) throw result;
+      return result;
+    },
+    fundamentals: async (ticker) => ({ ticker, source: name, updatedAt: new Date().toISOString() }),
+  };
+}
+
 describe('Cascade', () => {
   it('returns result from first source when it succeeds', async () => {
     const src1 = stubSource('s1', makeQuote('PETR4', 's1'));
@@ -86,6 +98,26 @@ describe('Cascade', () => {
     // Now s1's circuit is open — should go straight to s2
     const q = await c.quote('PETR4');
     expect(q.source).toBe('s2');
+    c.stop();
+  });
+
+  it('does not open circuit breaker for ticker not found errors', async () => {
+    const src1 = dynamicSource('s1', ticker => {
+      if (ticker === 'VALE3') return new B3Error('TICKER_NOT_FOUND', 'not found');
+      return makeQuote(ticker, 's1');
+    });
+    const src2 = stubSource('s2', new B3Error('TICKER_NOT_FOUND', 'not found'));
+
+    const c = new Cascade([src1, src2], nop);
+
+    for (let i = 0; i < 3; i++) {
+      await expect(c.quote('VALE3')).rejects.toSatisfy(
+        (e: unknown) => e instanceof B3Error && e.code === 'TICKER_NOT_FOUND',
+      );
+    }
+
+    const q = await c.quote('PETR4');
+    expect(q.source).toBe('s1');
     c.stop();
   });
 

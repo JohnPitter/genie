@@ -8,7 +8,7 @@ import type { Logger } from 'pino';
 const tickerSchema = {
   type: 'object',
   properties: {
-    ticker: { type: 'string', pattern: '^[A-Z]{4}[0-9]{1,2}$', description: 'Código do ativo B3 a favoritar, ex PETR4' },
+    ticker: { type: 'string', pattern: '^[A-Z0-9]{2,6}[0-9]{1,2}[A-Z]?$', description: 'Código do ativo B3 a favoritar, ex PETR4' },
   },
   required: ['ticker'],
 };

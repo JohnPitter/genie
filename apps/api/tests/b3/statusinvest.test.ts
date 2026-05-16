@@ -75,6 +75,19 @@ describe('StatusInvestScraper', () => {
       expect(path).toBe('/acoes/petr4');
     });
 
+    it('requests FII URL for real estate funds', async () => {
+      let path = '';
+      const srv = await startServer((req, res) => {
+        path = req.url ?? '';
+        htmlResponse(res, PETR4_HTML);
+      });
+      close = srv.close;
+
+      const src = new StatusInvestScraper(nop, srv.url);
+      await src.quote('MXRF11');
+      expect(path).toBe('/fundos-imobiliarios/mxrf11');
+    });
+
     it('throws TICKER_NOT_FOUND on 404', async () => {
       const srv = await startServer((_req, res) => statusResponse(res, 404));
       close = srv.close;

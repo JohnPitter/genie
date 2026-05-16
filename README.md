@@ -35,7 +35,7 @@ Além do chat, o Genie publica um **editorial financeiro diário** gerado por IA
 | Categoria | O que você ganha |
 |---|---|
 | **Chat com IA** | Agente em português brasileiro com streaming SSE — responde perguntas sobre qualquer ativo da B3 |
-| **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático e endpoint público rate-limited |
+| **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 4 fontes com circuit breaker automático e endpoint público rate-limited |
 | **Fundamentos** | P/L, P/VP, Dividend Yield, ROE, Dív/Patrim., Margem Líquida (FIIs detectados automaticamente e excluídos do scrape desnecessário) |
 | **Predições de IA** | Score quantitativo -6 a +6 baseado em RSI, MACD, Bollinger, Médias Móveis, Volume e contexto IBOV — página `/predicoes` com top compras/vendas |
 | **Backtest walk-forward** | Acurácia histórica de 60 dias por ticker — cada sinal mostra quantos % acertou D+5 no passado |
@@ -43,12 +43,12 @@ Além do chat, o Genie publica um **editorial financeiro diário** gerado por IA
 | **Sentimento por setor** | Termômetro ↑ Alta / ↓ Baixa / → Lateral derivado das cotações reais dos tickers de cada seção editorial |
 | **Notícias filtradas** | Google News RSS por ticker e categoria com cache SQLite e queries enriquecidas com nome da empresa |
 | **Rankings** | Top 5 ativos mais citados nas notícias por setor, com cotação e link direto para análise |
-| **Busca de tickers** | Busca por prefixo em +150 ativos catalogados em 7 setores |
+| **Busca de tickers** | Busca por prefixo em +130 ativos catalogados em 7 setores |
 | **Favoritos** | Adicione/remova ativos — o agente usa sua carteira como contexto nas respostas |
 | **Bootstrap automático** | Na primeira inicialização: news-refresh e editorial rodam automaticamente (escolhe o slot BRT mais recente) |
 | **Parser tolerante de LLM** | Strip de markdown fences, extração de JSON balanceado e reparo de respostas truncadas — produz conteúdo mesmo com modelos `:free` verbosos |
 | **Fallback de modelo** | Múltiplos modelos LLM em cascata via `OPENROUTER_MODEL_FALLBACK` — se o primário falhar, o próximo entra automaticamente |
-| **Circuit breaker** | Cascade de 5 fontes com fallback automático — nenhum ativo da B3 fica sem cotação |
+| **Circuit breaker** | Cascade de 4 fontes com fallback automático — nenhum ativo da B3 fica sem cotação |
 | **Barra de progresso** | Indicador visual de navegação (estilo GitHub) durante loads lentos — elimina double-click em mobile |
 | **Defesa contra prompt injection** | Whitelist de chaves de contexto, stripping de role tokens, sandwich defense e detecção heurística |
 | **Timing por step** | Logs de TTFT, duração LLM e tools por step de raciocínio — identifique gargalos facilmente |
@@ -74,12 +74,11 @@ graph TD
     WEB["web_search\nweb_fetch"]
     FAVTOOLS["favorite_add\nfavorite_remove\nfavorite_list"]
 
-    CASCADE["⚡ B3 Cascade (5 fontes)"]
-    BRAPI["1. brapi.dev"]
-    YFINANCE["2. Yahoo Finance"]
-    STATUS["3. StatusInvest"]
-    GOOGLE["4. Google Finance"]
-    FUND["5. Fundamentus"]
+    CASCADE["⚡ B3 Cascade (4 fontes)"]
+    GOOGLE["1. Google Finance"]
+    STATUS["2. StatusInvest"]
+    YFINANCE["3. Yahoo Finance"]
+    FUND["4. Fundamentus"]
 
     NEWS["📰 NewsService\nGoogle News RSS → SQLite"]
     SCREENER["🔮 Screener\nRSI · MACD · Bollinger\nMédias · Volume · IBOV"]
@@ -94,7 +93,7 @@ graph TD
     LLM -->|tool_calls| TOOLS
     TOOLS --> QUOTE & WEB & FAVTOOLS
     QUOTE --> CASCADE
-    CASCADE --> BRAPI & YFINANCE & STATUS & GOOGLE & FUND
+    CASCADE --> GOOGLE & STATUS & YFINANCE & FUND
     WEB --> NEWS
     NEWS --> DB
     FAVTOOLS --> DB
@@ -113,17 +112,16 @@ graph TD
     style EDITORIAL fill:#6B3FA0,color:#fff,stroke:none,rx:12
 ```
 
-### Cascade de 5 Fontes B3
+### Cascade de 4 Fontes B3
 
 Cada request percorre as fontes em ordem. Se uma falha ou o circuit breaker abriu, a próxima é tentada automaticamente:
 
 | # | Fonte | Tipo | Cobertura |
 |---|---|---|---|
-| 1 | **brapi.dev** | API | Principais ativos, dados ricos |
-| 2 | **Yahoo Finance** | API | Ampla cobertura, fundamentos completos |
-| 3 | **StatusInvest** | Scraper | B3 nativa, todos os setores |
-| 4 | **Google Finance** | Scraper | Ampla cobertura global |
-| 5 | **Fundamentus** | Scraper | Small/mid caps que as outras perdem |
+| 1 | **Google Finance** | Scraper | Fonte primária de cotação BVMF |
+| 2 | **StatusInvest** | Scraper | B3 nativa, FIIs e indicadores locais |
+| 3 | **Yahoo Finance** | API | Fallback de cobertura e fundamentos |
+| 4 | **Fundamentus** | Scraper | Small/mid caps que as outras perdem |
 
 FIIs (tickers terminados em `11` que não são units conhecidas como SANB11, BPAC11) são detectados automaticamente e excluídos do scrape de fundamentos — economiza ~5s de cascata de falhas inevitáveis.
 
@@ -197,7 +195,7 @@ Em `/settings` você acessa com o `ADMIN_TOKEN` do `.env` para:
 | **Backend** | Node 22 + Fastify 5 + TypeScript |
 | **Banco** | SQLite via better-sqlite3 (WAL mode) |
 | **LLM** | OpenRouter — cascade de modelos via `models: []`, suporte nativo a fallback |
-| **B3 Sources** | brapi.dev · Yahoo Finance · StatusInvest · Google Finance · Fundamentus |
+| **B3 Sources** | Google Finance · StatusInvest · Yahoo Finance · Fundamentus |
 | **Notícias** | Google News RSS (por ticker e categoria) + SQLite cache + coleta balanceada por setor |
 | **Editorial** | LLM investigativo 4×/dia BRT + parser tolerante de JSON truncado + batch quotes |
 | **Predições** | Score multi-indicador (RSI, MACD, Bollinger, SMA, Volume, IBOV) + backtest walk-forward 60d |
@@ -280,7 +278,7 @@ genie/
 │  ├─ api/                    # Backend TypeScript (Fastify + SQLite)
 │  │  ├─ src/
 │  │  │  ├─ agent/            # QueryLoop, Registry, OpenRouterClient, prompts, defesas anti-injection
-│  │  │  ├─ b3/               # Cascade + 5 fontes · screener · score · backtest · ibov · categories · isFII
+│  │  │  ├─ b3/               # Cascade + 4 fontes · screener · score · backtest · ibov · categories · isFII
 │  │  │  ├─ editorial/        # generator · prompt · store · service · types (Por dentro das notícias)
 │  │  │  ├─ jobs/             # Scheduler, DailyFavoritesJob, NewsRefreshJob, PredictionsRefreshJob, EditorialRefreshJob
 │  │  │  ├─ lib/              # json-tolerant · sleep · config · logger

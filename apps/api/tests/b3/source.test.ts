@@ -5,7 +5,7 @@ import { B3Error } from '../../src/b3/types.ts';
 describe('validateTicker', () => {
   it.each([
     'PETR4', 'VALE3', 'ITUB4', 'SANB11', 'B3SA3', 'OIBR3', 'CASH3',
-    'AAPL34', 'GOOGL34', 'MSFT34',
+    'AAPL34', 'GOOGL34', 'MSFT34', 'EQMA3B', 'MRSA3B',
   ])('accepts valid ticker %s', ticker => {
     expect(() => validateTicker(ticker)).not.toThrow();
   });
