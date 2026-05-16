@@ -35,7 +35,7 @@ Além do chat, o Genie publica um **editorial financeiro diário** gerado por IA
 | Categoria | O que você ganha |
 |---|---|
 | **Chat com IA** | Agente em português brasileiro com streaming SSE — responde perguntas sobre qualquer ativo da B3 |
-| **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático |
+| **Cotações em tempo real** | Preço, variação %, volume e market cap via cascade de 5 fontes com circuit breaker automático e endpoint público rate-limited |
 | **Fundamentos** | P/L, P/VP, Dividend Yield, ROE, Dív/Patrim., Margem Líquida (FIIs detectados automaticamente e excluídos do scrape desnecessário) |
 | **Predições de IA** | Score quantitativo -6 a +6 baseado em RSI, MACD, Bollinger, Médias Móveis, Volume e contexto IBOV — página `/predicoes` com top compras/vendas |
 | **Backtest walk-forward** | Acurácia histórica de 60 dias por ticker — cada sinal mostra quantos % acertou D+5 no passado |
@@ -56,7 +56,7 @@ Além do chat, o Genie publica um **editorial financeiro diário** gerado por IA
 | **Jobs agendados** | Refresh horário de notícias (seleção balanceada por categoria), editorial 4x/dia e screener de predições |
 | **Painel Admin** | `/settings` protegido por token — disparo manual de qualquer job incluindo editorial por slot |
 | **CI/CD** | GitHub Actions com type-check, svelte-check, testes e build em cada PR |
-| **737 testes** | 300 API (unit + integration + e2e parity) + 437 Web — todos passando |
+| **740 testes** | 303 API (unit + integration + e2e parity) + 437 Web — todos passando |
 
 ---
 
@@ -126,6 +126,15 @@ Cada request percorre as fontes em ordem. Se uma falha ou o circuit breaker abri
 | 5 | **Fundamentus** | Scraper | Small/mid caps que as outras perdem |
 
 FIIs (tickers terminados em `11` que não são units conhecidas como SANB11, BPAC11) são detectados automaticamente e excluídos do scrape de fundamentos — economiza ~5s de cascata de falhas inevitáveis.
+
+### API Pública de Cotações
+
+Consumidores externos podem consultar apenas cotações pelo namespace público, sem autenticação:
+
+- `GET /api/public/quotes/:ticker` — cotação de um ativo, ex: `/api/public/quotes/PETR4`
+- `GET /api/public/quotes?tickers=PETR4,VALE3` — batch de até 20 tickers válidos
+
+As respostas incluem `Cache-Control: public, max-age=60`, `Access-Control-Allow-Origin: *` e rate limit de 30 requests por minuto por IP.
 
 ### Editorial Financeiro (Por dentro das notícias)
 

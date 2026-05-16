@@ -107,6 +107,77 @@ describe('GET /api/b3/quote/:ticker with b3 dep', () => {
   });
 });
 
+describe('Public quotes API', () => {
+  it('GET /api/public/quotes/:ticker returns quote with public cache and CORS headers', async () => {
+    const mockB3 = {
+      name: () => 'mock',
+      quote: async (ticker: string) => ({
+        ticker, name: 'Petrobras', price: 38.12, changePct: 1.25,
+        volume: 0, currency: 'BRL', updatedAt: new Date().toISOString(), source: 'mock',
+      }),
+      fundamentals: async (ticker: string) => ({ ticker, source: 'mock', updatedAt: new Date().toISOString() }),
+    };
+    const appWithB3 = await buildApp({ db, log: nop, b3: mockB3 });
+    await appWithB3.ready();
+
+    const res = await appWithB3.inject({
+      method: 'GET',
+      url: '/api/public/quotes/PETR4',
+      headers: { origin: 'https://consumer.example' },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res.headers['cache-control']).toBe('public, max-age=60');
+    expect(res.json().ticker).toBe('PETR4');
+
+    await appWithB3.close();
+  });
+
+  it('GET /api/public/quotes supports comma-separated batch lookup', async () => {
+    const mockB3 = {
+      name: () => 'mock',
+      quote: async (ticker: string) => ({
+        ticker, name: ticker, price: 10, changePct: 0,
+        volume: 0, currency: 'BRL', updatedAt: new Date().toISOString(), source: 'mock',
+      }),
+      fundamentals: async (ticker: string) => ({ ticker, source: 'mock', updatedAt: new Date().toISOString() }),
+    };
+    const appWithB3 = await buildApp({ db, log: nop, b3: mockB3 });
+    await appWithB3.ready();
+
+    const res = await appWithB3.inject('/api/public/quotes?tickers=PETR4,VALE3');
+
+    expect(res.statusCode).toBe(200);
+    expect(Object.keys(res.json())).toEqual(['PETR4', 'VALE3']);
+
+    await appWithB3.close();
+  });
+
+  it('GET /api/public/quotes/:ticker applies a stricter public rate limit', async () => {
+    const mockB3 = {
+      name: () => 'mock',
+      quote: async (ticker: string) => ({
+        ticker, name: ticker, price: 10, changePct: 0,
+        volume: 0, currency: 'BRL', updatedAt: new Date().toISOString(), source: 'mock',
+      }),
+      fundamentals: async (ticker: string) => ({ ticker, source: 'mock', updatedAt: new Date().toISOString() }),
+    };
+    const appWithB3 = await buildApp({ db, log: nop, b3: mockB3 });
+    await appWithB3.ready();
+
+    for (let i = 0; i < 30; i += 1) {
+      const res = await appWithB3.inject('/api/public/quotes/PETR4');
+      expect(res.statusCode).toBe(200);
+    }
+
+    const blocked = await appWithB3.inject('/api/public/quotes/PETR4');
+    expect(blocked.statusCode).toBe(429);
+
+    await appWithB3.close();
+  });
+});
+
 describe('Favorites API', () => {
   it('POST /api/favorites adds a ticker', async () => {
     const res = await app.inject({

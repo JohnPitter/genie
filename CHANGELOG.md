@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- API pública de cotações sem autenticação: `GET /api/public/quotes/:ticker` e `GET /api/public/quotes?tickers=PETR4,VALE3`, com CORS aberto, cache público de 60s e rate limit de 30 requests/min por IP.
+
+### Changed
+
+- Extraída abstração compartilhada para leitura de cotações, reutilizada por `/api/b3/quote/:ticker`, `/api/b3/quotes/batch` e pelos endpoints públicos.
+- Corrigido o handler global de erros para preservar respostas `429` do rate limit em vez de convertê-las para `500`.
+
 ## [2.1.0] - 2026-04-24
 
 ### Fase 15: Por dentro das notícias (editorial financeiro com IA)

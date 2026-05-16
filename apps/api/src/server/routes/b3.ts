@@ -1,33 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import type { AppDeps } from '../app.ts';
 import { validateTicker } from '../../b3/source.ts';
-import { B3Error } from '../../b3/types.ts';
 import { searchTickers, categoryOf, allTickers, ALL_CATEGORIES, tickersFor } from '../../b3/categories.ts';
+import { QUOTE_CACHE_CONTROL, createQuoteService, quoteErrorToHTTP } from '../quote_service.ts';
 
-function b3ErrorToHTTP(err: unknown): { status: number; message: string } {
-  if (err instanceof B3Error) {
-    if (err.code === 'INVALID_TICKER') return { status: 400, message: 'invalid ticker format' };
-    if (err.code === 'TICKER_NOT_FOUND') return { status: 404, message: 'ticker not found' };
-  }
-  return { status: 503, message: 'data temporarily unavailable' };
-}
+const INTERNAL_BATCH_RATE_LIMIT_MAX = 30;
+const INTERNAL_BATCH_RATE_LIMIT_WINDOW = '1 minute';
 
 export async function registerB3Routes(app: FastifyInstance, deps: AppDeps): Promise<void> {
+  const quotes = createQuoteService(deps.b3);
+
   app.get<{ Params: { ticker: string } }>('/api/b3/quote/:ticker', async (req, reply) => {
-    if (!deps.b3) return reply.status(503).send({ error: 'b3 data source not configured' });
-
-    const ticker = req.params.ticker.toUpperCase();
     try {
-      validateTicker(ticker);
-    } catch (e) {
-      return reply.status(400).send({ error: 'invalid ticker format' });
-    }
-
-    try {
-      const quote = await deps.b3.quote(ticker);
+      const quote = await quotes.get(req.params.ticker);
       return reply.send(quote);
     } catch (err) {
-      const { status, message } = b3ErrorToHTTP(err);
+      const { status, message } = quoteErrorToHTTP(err);
       return reply.status(status).send({ error: message });
     }
   });
@@ -46,7 +34,7 @@ export async function registerB3Routes(app: FastifyInstance, deps: AppDeps): Pro
       const f = await deps.b3.fundamentals(ticker);
       return reply.send(f);
     } catch (err) {
-      const { status, message } = b3ErrorToHTTP(err);
+      const { status, message } = quoteErrorToHTTP(err);
       return reply.status(status).send({ error: message });
     }
   });
@@ -66,42 +54,19 @@ export async function registerB3Routes(app: FastifyInstance, deps: AppDeps): Pro
   });
 
   app.post<{ Body: { tickers: unknown } }>('/api/b3/quotes/batch', {
-    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    config: { rateLimit: { max: INTERNAL_BATCH_RATE_LIMIT_MAX, timeWindow: INTERNAL_BATCH_RATE_LIMIT_WINDOW } },
   }, async (req, reply) => {
-    if (!deps.b3) return reply.status(503).send({ error: 'b3 data source not configured' });
-
     const { tickers } = req.body;
     if (!Array.isArray(tickers) || tickers.length === 0) {
       return reply.status(400).send({ error: 'body must contain a non-empty tickers array' });
     }
 
-    const validTickers: string[] = [];
-    for (const t of tickers.slice(0, 20)) {
-      if (typeof t !== 'string') continue;
-      const upper = t.toUpperCase();
-      try {
-        validateTicker(upper);
-        validTickers.push(upper);
-      } catch {
-        // silently skip invalid tickers
-      }
+    try {
+      const batch = await quotes.getBatch(tickers);
+      return reply.header('Cache-Control', QUOTE_CACHE_CONTROL).send(batch);
+    } catch (err) {
+      const { status, message } = quoteErrorToHTTP(err);
+      return reply.status(status).send({ error: message });
     }
-
-    if (validTickers.length === 0) {
-      return reply.status(400).send({ error: 'no valid tickers provided' });
-    }
-
-    const results = await Promise.allSettled(
-      validTickers.map(ticker => deps.b3!.quote(ticker).then(quote => ({ ticker, quote }))),
-    );
-
-    const quotes: Record<string, unknown> = {};
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        quotes[result.value.ticker] = result.value.quote;
-      }
-    }
-
-    return reply.header('Cache-Control', 'public, max-age=60').send(quotes);
   });
 }

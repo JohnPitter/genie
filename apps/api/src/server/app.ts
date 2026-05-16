@@ -13,6 +13,7 @@ import type { EditorialService } from '../editorial/service.ts';
 import type { Logger } from 'pino';
 import { registerChatRoutes } from './routes/chat.ts';
 import { registerB3Routes } from './routes/b3.ts';
+import { registerPublicQuoteRoutes } from './routes/public_quotes.ts';
 import { registerNewsRoutes } from './routes/news.ts';
 import { registerFavoritesRoutes } from './routes/favorites.ts';
 import { registerAdminRoutes } from './routes/admin.ts';
@@ -23,6 +24,8 @@ import { registerStatsRoutes } from './routes/stats.ts';
 import { recordRequest } from '../lib/metrics.ts';
 
 export const VERSION = '0.2.0';
+const RATE_LIMIT_STATUS_CODE = 429;
+const RATE_LIMIT_ERROR = 'too many requests';
 
 /** Extrai o IP real do cliente respeitando proxies confiáveis. */
 function clientIp(req: FastifyRequest): string {
@@ -126,9 +129,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   // Em produção não vaza stack traces; em desenvolvimento mantém detalhes
   app.setErrorHandler((err, _req, reply) => {
     deps.log.error({ err }, 'unhandled error');
-    if (reply.statusCode === 429) {
-      // Já tratado pelo rate-limit plugin — não sobrescrever
-      return;
+    const retryAfterHeader = reply.getHeader('retry-after');
+    if (reply.statusCode === RATE_LIMIT_STATUS_CODE || retryAfterHeader != null) {
+      const retryAfter = Number(retryAfterHeader ?? 0);
+      return reply.status(RATE_LIMIT_STATUS_CODE).send({
+        error: RATE_LIMIT_ERROR,
+        retryAfter,
+      });
     }
     const detail = err instanceof Error ? err.message : String(err);
     reply.status(500).send({
@@ -148,6 +155,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   app.get('/api/config', async () => ({ version: VERSION, model: deps.model ?? '' }));
 
   // Domain routes
+  await registerPublicQuoteRoutes(app, deps);
   await registerB3Routes(app, deps);
   await registerNewsRoutes(app, deps);
   await registerFavoritesRoutes(app, deps);
